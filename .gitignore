@@ -1,0 +1,12 @@
+.DS_Store
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+Pedy.xcodeproj/
+.swiftpm/
+*.mobileprovision
+*.p12
+.env
+__pycache__/
+*.pyc
