@@ -1,0 +1,16 @@
+[Unit]
+Description=Fetch the latest successful Pedy unsigned IPA from GitHub Actions
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=pedy
+Group=pedy
+EnvironmentFile=/etc/pedy/github.env
+ExecStart=/usr/bin/python3 /opt/pedy/fetch_ipa.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/pedy
+
