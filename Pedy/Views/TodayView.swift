@@ -1,0 +1,124 @@
+import SwiftUI
+import SwiftData
+
+struct TodayView: View {
+    @Query(sort: \Plant.name) private var plants: [Plant]
+    @State private var showingAdd = false
+
+    private var sessions: [CareSession] {
+        CarePlanner.sessions(for: CarePlanner.tasks(for: plants))
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Twój rytm")
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(Palette.forest)
+                    Text("Mniej przypomnień. Więcej spokoju.")
+                        .foregroundStyle(.secondary)
+                }
+
+                if plants.isEmpty {
+                    ContentUnavailableView(
+                        "Dodaj pierwszą roślinę",
+                        systemImage: "leaf",
+                        description: Text("Zapisz roślinę i datę najbliższej kontroli, aby zobaczyć plan.")
+                    )
+                    Button("Dodaj roślinę") { showingAdd = true }
+                        .buttonStyle(PrimaryButtonStyle())
+                } else if let first = sessions.first {
+                    NavigationLink {
+                        SessionView(session: first, plants: plants)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("NAJBLIŻSZA SESJA")
+                                .font(.caption.weight(.semibold))
+                            Text(first.date, format: .dateTime.weekday(.wide).day().month(.wide))
+                                .font(.title2.bold())
+                            Text("\(first.tasks.count) \(first.tasks.count == 1 ? "roślina" : first.tasks.count < 5 ? "rośliny" : "roślin") · wspólna kontrola")
+                            Label("Zobacz plan", systemImage: "arrow.right")
+                                .font(.headline)
+                                .padding(.top, 12)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(24)
+                        .background(Palette.terracotta, in: RoundedRectangle(cornerRadius: 24))
+                    }
+                    .buttonStyle(.plain)
+
+                    Text("DO SPRAWDZENIA")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+
+                    ForEach(first.tasks) { task in
+                        if let plant = plants.first(where: { $0.id == task.plantID }) {
+                            NavigationLink {
+                                CareDetailView(plant: plant)
+                            } label: {
+                                HStack {
+                                    Image(systemName: "leaf")
+                                        .frame(width: 42, height: 42)
+                                        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12))
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(plant.name).font(.headline)
+                                        Text("Sprawdź podłoże").font(.subheadline).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                                }
+                                .foregroundStyle(Palette.forest)
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+                            Divider()
+                        }
+                    }
+
+                    Text("Podlej dopiero po sprawdzeniu podłoża. Termin jest przypomnieniem o kontroli.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(20)
+        }
+        .background(Palette.background.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
+        .sheet(isPresented: $showingAdd) { AddPlantView() }
+    }
+}
+
+struct SessionView: View {
+    let session: CareSession
+    let plants: [Plant]
+
+    var body: some View {
+        List {
+            Section {
+                Text(session.date, format: .dateTime.weekday(.wide).day().month(.wide))
+                    .font(.title2.bold())
+                Text("Sprawdź każdą roślinę i zapisz wynik. Podlewanie potwierdzisz osobno.")
+                    .foregroundStyle(.secondary)
+            }
+            Section("Kolejność kontroli") {
+                ForEach(session.tasks) { task in
+                    if let plant = plants.first(where: { $0.id == task.plantID }) {
+                        NavigationLink {
+                            CareDetailView(plant: plant)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(plant.name).font(.headline)
+                                Text("Sprawdź podłoże").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(Palette.background)
+        .navigationTitle("Plan pielęgnacji")
+    }
+}
