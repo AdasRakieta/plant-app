@@ -6,7 +6,7 @@ if [[ ${EUID} -ne 0 ]]; then
   echo 'Uruchom: sudo bash pi/install.sh' >&2
   exit 2
 fi
-if [[ ! -f pi/fetch_ipa.py || ! -f pi/pedy-fetch.service || ! -f pi/pedy-fetch.timer ]]; then
+if [[ ! -f pi/fetch_ipa.py || ! -f pi/serve_ipa.py || ! -f pi/pedy-fetch.service || ! -f pi/pedy-fetch.timer || ! -f pi/pedy-serve.service ]]; then
   echo 'Uruchom skrypt z głównego katalogu repozytorium plant-app.' >&2
   exit 2
 fi
@@ -24,8 +24,10 @@ install -d -o root -g root -m 0755 /opt/pedy
 install -d -o pedy -g pedy -m 0755 /srv/pedy
 install -d -o root -g root -m 0700 /etc/pedy
 install -o root -g root -m 0755 pi/fetch_ipa.py /opt/pedy/fetch_ipa.py
+install -o root -g root -m 0755 pi/serve_ipa.py /opt/pedy/serve_ipa.py
 install -o root -g root -m 0644 pi/pedy-fetch.service /etc/systemd/system/pedy-fetch.service
 install -o root -g root -m 0644 pi/pedy-fetch.timer /etc/systemd/system/pedy-fetch.timer
+install -o root -g root -m 0644 pi/pedy-serve.service /etc/systemd/system/pedy-serve.service
 
 if [[ ! -s /etc/pedy/github.env ]]; then
   if [[ ! -t 0 ]]; then
@@ -56,20 +58,22 @@ systemctl daemon-reload
 systemctl enable --now pedy-fetch.timer
 systemctl start pedy-fetch.service
 test -s /srv/pedy/Pedy.ipa
+systemctl enable pedy-serve.service
+systemctl restart pedy-serve.service
 echo 'IPA pobrane do /srv/pedy/Pedy.ipa; sprawdź: systemctl status pedy-fetch.timer'
+echo 'Sieć lokalna: http://<adres-IP-maliny>:8787/app/'
 
 if ! command -v tailscale >/dev/null 2>&1; then
-  echo 'Tailscale nie jest zainstalowany. Zainstaluj go według oficjalnej instrukcji, uruchom tailscale up, a potem: sudo tailscale serve --bg /srv/pedy'
+  echo 'Tailscale nie jest zainstalowany. Po instalacji i tailscale up uruchom: sudo tailscale serve --bg --set-path=/app /srv/pedy'
 elif ! tailscale status >/dev/null 2>&1; then
-  echo 'Tailscale nie jest połączony. Uruchom sudo tailscale up, a potem: sudo tailscale serve --bg /srv/pedy'
+  echo 'Tailscale nie jest połączony. Uruchom sudo tailscale up, a potem: sudo tailscale serve --bg --set-path=/app /srv/pedy'
 else
   serve_status=$(tailscale serve status 2>&1 || true)
-  if [[ "$serve_status" == *'https://'* || "$serve_status" == *'http://'* ]]; then
-    echo 'Na Pi działa już Tailscale Serve. Nie zmieniam istniejącej konfiguracji:'
+  if [[ "$serve_status" == *'/app'* ]]; then
+    echo 'Ścieżka /app jest już skonfigurowana w Tailscale Serve:'
     tailscale serve status
-    echo 'Jeśli chcesz udostępnić Pędy, sprawdź tę konfigurację i dodaj /srv/pedy osobno.'
   else
-    tailscale serve --bg /srv/pedy
+    tailscale serve --bg --set-path=/app /srv/pedy
     tailscale serve status
   fi
 fi

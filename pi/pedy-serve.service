@@ -1,0 +1,17 @@
+[Unit]
+Description=Serve Pedy IPA on the local network
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=pedy
+Group=pedy
+Environment=PEDY_SERVE_DIR=/srv/pedy
+ExecStart=/usr/bin/python3 /opt/pedy/serve_ipa.py
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

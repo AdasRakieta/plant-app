@@ -1,34 +1,53 @@
-# Budowa, pobieranie i odświeżanie Pędów bez Maca
+# Pobieranie Pędów i odnawianie podpisu SideStore
 
-Stan planu: 1 października 2026. To instrukcja dla GitHub Actions, iPhone'a, komputera PC potrzebnego do jednorazowej instalacji SideStore oraz Raspberry Pi w domowej sieci. Komendy na Pi są przygotowane do uruchomienia po pierwszym poprawnym buildzie; nie zostały wykonane na urządzeniach użytkownika.
+Stan: 2 października 2026. Repo zawiera konfigurację do uruchomienia na Raspberry Pi; instalacja na Pi i test na iPhonie wymagają dostępu do tych urządzeń.
 
-## Dwie różne czynności
+## Ustalone działanie
 
-1. **Budowa:** GitHub Actions uruchamia Xcode na `macos-latest`, testuje aplikację i publikuje artefakt `pedy-unsigned-ipa` zawierający `Pedy-unsigned.ipa`. To plik dla prawdziwego iPhone'a, a nie build symulatora. Jest **niepodpisany**.
-2. **Podpis i instalacja:** SideStore na iPhonie używa konta Apple do podpisania/importu IPA i odświeża zainstalowaną aplikację. Raspberry Pi nie tworzy ani nie odnawia tego podpisu. Przechowuje najnowszy plik instalacyjny i udostępnia go prywatnie.
+1. GitHub Actions buduje **niepodpisane** `Pedy-unsigned.ipa` dla iPhone'a. Pi co 6 godzin sprawdza artefakty z `main`, wybiera najnowszy przebieg zakończony sukcesem, weryfikuje strukturę IPA i zapisuje go pod stałą nazwą `/srv/pedy/Pedy.ipa`. Lokalna kopia pozostaje dostępna także po wygaśnięciu artefaktu GitHub lub chwilowym błędzie pobrania.
+2. Pi udostępnia plik w sieci domowej pod `http://<LAN-IP-maliny>:8787/app/Pedy.ipa` oraz prywatnie w Tailscale pod `https://malina.tail384b18.ts.net/app/Pedy.ipa`. Strona `/app/` ma link do pobrania. Tailscale Serve wymaga włączenia HTTPS w tailnecie i dostępu tego urządzenia zgodnie z regułami tailnetu. Nie używamy publicznego Funnel.
+3. SideStore na iPhonie podpisuje i instaluje pobrane IPA. To samo IPA można pobrać wielokrotnie; Pi nie przechowuje konta Apple, certyfikatu SideStore ani pliku parowania.
+4. SideStore okresowo odnawia podpis własny i aplikacji w tle, pod warunkiem że iOS da mu czas oraz spełnione są warunki sieciowe. Pi nie może wymusić tego odnowienia.
 
-## Wariant bezpłatny: SideStore + Pi
+## Instalacja na Pi
 
-1. Po publikacji repozytorium sprawdzić zielony przebieg workflow `iOS` i pobrać artefakt. Dopiero wtedy instalować plik na telefonie.
-2. Zainstalować SideStore pierwszy raz za pomocą iloader na PC i przewodu USB. SideStore wymaga konta Apple, Wi‑Fi i aplikacji LocalDevVPN podczas instalowania, aktualizowania oraz odświeżania. Zachować plik parowania tylko w zaufanym miejscu; **nie dodawać go do repo ani Pi**.
-3. Na Raspberry Pi ustawić Tailscale w tym samym tailnecie co iPhone. Utworzyć osobne konto systemowe `pedy`, `/opt/pedy` z `fetch_ipa.py`, `/srv/pedy` jako katalog odczytu oraz `/etc/pedy/github.env` z `PEDY_REPO=AdasRakieta/plant-app`, `PEDY_SERVE_DIR=/srv/pedy` i tokenem `GH_READ_TOKEN`. Token o minimalnym dostępie tylko do odczytu artefaktów repo; plik środowiska właściciel root, tryb `0600`, nigdy w repo. Repo jest obecnie publiczne; kiedy artefakty publicznego repo można pobrać bez uwierzytelnienia, skrypt można rozszerzyć o taki tryb zamiast tworzyć token.
-4. Umieścić `pedy-fetch.service` i `.timer` w systemd, włączyć timer. Skrypt co 6 h pobiera najnowszy artefakt z gałęzi `main`, weryfikuje strukturę IPA i zapisuje atomowo `/srv/pedy/Pedy.ipa` wraz z `build.json` i SHA-256. Najpierw uruchomić usługę ręcznie i sprawdzić log oraz sumę.
-5. Udostępnić katalog przez `tailscale serve --bg /srv/pedy` (po włączeniu HTTPS w tailnecie). Potwierdzić `tailscale serve status`; używać **Serve**, nie Funnel. Adres jest dostępny dla urządzeń uprawnionych w tailnecie.
-6. Na iPhonie włączyć Tailscale, pobrać `Pedy.ipa` z prywatnego adresu maliny do aplikacji Pliki. Następnie wyłączyć Tailscale, włączyć LocalDevVPN przy połączeniu Wi‑Fi i otworzyć pobrany plik w SideStore. Podczas testu sprawdzić, czy SideStore aktualizuje tę samą aplikację i zachowuje lokalne dane; stały identyfikator aplikacji jest konieczny.
-7. Utrzymywać włączone Wi‑Fi i LocalDevVPN wtedy, gdy SideStore ma odnawiać podpis, oraz okresowo sprawdzić licznik ważności w `My Apps`. Automatyczne odświeżanie w tle jest funkcją SideStore, ale rzeczywisty przebieg zależy od iOS i warunków sieciowych; nie zakładać, że timer Raspberry Pi zastępuje tę czynność.
+Najpierw opublikować aktualny kod i uzyskać zielony przebieg workflow `iOS`. Na Pi z połączonym Tailscale sklonować repo i z jego katalogu głównego uruchomić:
 
-Na iOS nie można opierać tej procedury na jednocześnie aktywnych Tailscale i LocalDevVPN. Pi może pobierać nową wersję IPA bez udziału telefonu, lecz instalacja aktualizacji i odnowienie 7-dniowego podpisu odbywają się przez SideStore na iPhonie. Zdalne pobranie z Pi na sieci komórkowej jest możliwe przez Tailscale; samo odświeżenie SideStore według jego dokumentacji wymaga Wi‑Fi i LocalDevVPN.
+```sh
+sudo bash pi/install.sh
+```
 
-## Gdy Tailscale ma być jedynym VPN na iPhonie
+Instalator zapyta o fine-grained token GitHub ograniczony do repo `AdasRakieta/plant-app`, z uprawnieniem `Actions: read`. Zapisze go w `/etc/pedy/github.env` z prawami `0600`. Jeśli plik już istnieje, pozostawi go. Zainstaluje usługi `pedy-fetch.timer` i `pedy-serve.service`, pobierze pierwsze IPA oraz doda `/app` do Tailscale Serve, jeśli ta ścieżka jest wolna. Nie zastępuje istniejącej konfiguracji innych ścieżek Serve.
 
-To wymaga **innej ścieżki podpisu niż darmowy SideStore**. Po dołączeniu do płatnego Apple Developer Program można zarejestrować iPhone'a, utworzyć certyfikat dystrybucyjny i profil Ad Hoc dla jego UDID, a następnie skonfigurować GitHub Actions do podpisanego archiwum. Apple opisuje też manifest do instalacji over-the-air. Wtedy Pi może serwować podpisany IPA i manifest przez HTTPS w Tailscale, bez LocalDevVPN na iPhonie. Certyfikat i profil trzeba odnawiać zgodnie z ich terminami; wybór ten wymaga konta programu i oddzielnego, kontrolowanego zarządzania sekretami CI. **Nie jest teraz skonfigurowany** i nie należy podmieniać niepodpisanego IPA w tej ścieżce. TestFlight jest jeszcze inną opcją przy płatnym koncie, lecz nie spełnia wymogu prywatnego pobierania z Pi.
+Sprawdzić na Pi:
 
-## Operacyjna lista kontrolna po założeniu repo
+```sh
+systemctl status pedy-fetch.timer pedy-serve.service
+sudo systemctl start pedy-fetch.service
+sudo journalctl -u pedy-fetch.service -n 30 --no-pager
+(cd /srv/pedy && sha256sum -c Pedy.sha256)
+curl -I http://127.0.0.1:8787/app/Pedy.ipa
+tailscale serve status
+```
 
-- Workflow kompiluje na macOS, testy przechodzą i artefakt ma `Payload/Pedy.app/Info.plist`.
-- Na Pi jest wyłącznie token do odczytu jednego repo, a katalog z IPA nie jest publicznym Funnel.
-- iPhone pobiera IPA przez Tailscale, SideStore instaluje go po przełączeniu na LocalDevVPN i Wi‑Fi.
-- Dane kolekcji pozostają po aktualizacji; wersja i identyfikator pakietu nie zmieniają się przypadkowo.
-- Odświeżenie podpisu przechodzi test na iPhonie kilka dni przed upływem ważności, także po restarcie i aktualizacji iOS.
+Następnie otworzyć oba adresy `/app/` na iPhonie. Adres LAN wymaga połączenia z domowym Wi-Fi i dostępu do portu TCP 8787 na Pi. Jeśli na Pi działa zapora, dopuścić ten port tylko z podsieci domowej. Adres Tailscale wymaga aktywnego Tailscale na telefonie. Jeśli `/app` w Serve było już zajęte, sprawdzić jego cel i zwolnić ścieżkę przed ponownym uruchomieniem instalatora.
 
-Źródła do weryfikacji przy konfiguracji: [SideStore prerequisites](https://docs.sidestore.io/docs/installation/prerequisites), [SideStore install](https://docs.sidestore.io/docs/installation/install), [SideStore FAQ](https://docs.sidestore.io/docs/faq), [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve), [Tailscale o wielu VPN](https://tailscale.com/docs/reference/faq/other-vpns), [Apple Ad Hoc](https://developer.apple.com/help/account/provisioning-profiles/create-an-ad-hoc-provisioning-profile), [Apple dystrybucja](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases).
+## Podpis i odświeżanie na iPhonie
+
+1. Zainstalować SideStore pierwszy raz przez iloader na komputerze, wgrać plik parowania do SideStore i wykonać pierwsze ręczne odświeżenie samego SideStore. Plik parowania zachować poza repo i Pi.
+2. W domu pobrać IPA z lokalnego `/app/`. Poza domem pobrać je przez Tailscale do Plików, a następnie przełączyć VPN z Tailscale na LocalDevVPN. Do instalowania i odświeżania SideStore wymaga Wi-Fi oraz LocalDevVPN. Na iPhonie nie należy zakładać równoczesnego działania obu VPN.
+3. Otworzyć IPA w SideStore. Przy aktualizacji nie usuwać starej aplikacji; ten sam identyfikator pozwala zachować jej dane. Potwierdzić to na urządzeniu po pierwszej aktualizacji.
+4. Włączyć odświeżanie aplikacji w tle dla SideStore, pozostawić dostęp do Wi-Fi i LocalDevVPN. Tryb niskiego zużycia energii i tryb niskiego transferu danych ograniczają odświeżanie w tle. Regularnie sprawdzać w `My Apps` liczniki SideStore i Pędów; kilka dni przed wygaśnięciem wykonać ręczne odświeżenie obu.
+
+Automatyzacja Skrótów uruchamiana po dołączeniu do domowego Wi-Fi może przypominać o sprawdzeniu SideStore. Jeśli konkretna wersja iOS oraz LocalDevVPN udostępnia działające sterowanie VPN w Skrótach, można przetestować jej włączenie. Nie traktować takiej automatyzacji jako gwarancji podpisu: SideStore nie udostępnia udokumentowanej akcji Skrótów do odnowienia podpisu. Przycisk `Refresh` w SideStore pozostaje drogą awaryjną.
+
+**Po wygaśnięciu:** jeśli wygasły Pędy, a SideStore działa, włączyć Wi-Fi i LocalDevVPN oraz spróbować odświeżyć lub ponownie wgrać tę samą wersję IPA bez usuwania aplikacji. Jeśli wygasł sam SideStore i nie otwiera się, trzeba zainstalować go ponownie przez iloader na komputerze, potem odświeżyć Pędy. Gdy wygasł plik parowania, utworzyć go ponownie w iloader. Pi i lokalne połączenie nie mogą samodzielnie wskrzesić wygasłego SideStore.
+
+## Warunki odbioru
+
+- Zielony przebieg `iOS` na `main`; `build.json` na Pi wskazuje jego `run_id`.
+- Oba adresy `/app/Pedy.ipa` pobierają identyczne bajty, zgodne z `Pedy.sha256`.
+- Po aktualizacji przez SideStore dane aplikacji pozostają na iPhonie.
+- Ręczne odświeżenie SideStore i Pędów działa na domowym Wi-Fi z LocalDevVPN; po kilku dniach sprawdzony zostaje również rzeczywisty przebieg w tle.
+
+Źródła: [SideStore FAQ](https://docs.sidestore.io/docs/faq), [wymagania SideStore](https://docs.sidestore.io/docs/installation/prerequisites), [instalacja i odzyskiwanie SideStore](https://docs.sidestore.io/docs/installation/install), [plik parowania](https://docs.sidestore.io/docs/advanced/pairing-file), [Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve), [automatyzacje iOS](https://support.apple.com/guide/shortcuts/add-automations-apdfbdbd7123/ios).

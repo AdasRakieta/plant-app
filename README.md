@@ -13,7 +13,7 @@ open Pedy.xcodeproj
 
 W Xcode wybierz schemat `Pedy` i symulator iPhone. Docelowo iOS 17+. Testy: `xcodebuild test -project Pedy.xcodeproj -scheme Pedy -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO` (nazwa dostępnego symulatora może się różnić). Projekt jest aplikacją SwiftUI ze SwiftData; nie osadza strony WWW.
 
-Ta sesja robocza ma środowisko Linux bez Swift i Xcode, dlatego kompilacja iOS nie została tu wykonana. GitHub Actions na macOS weryfikuje projekt po publikacji repozytorium i produkuje **niepodpisany** plik IPA z builda dla urządzenia. Pierwszą kompilację oraz zachowanie w symulatorze trzeba sprawdzić przed uznaniem etapu za ukończony.
+GitHub Actions na macOS kompiluje projekt, uruchamia testy i produkuje **niepodpisany** plik IPA dla urządzenia. Przebieg `iOS` na `main` zakończył się sukcesem 1 października 2026; zachowanie na fizycznym iPhonie nadal wymaga sprawdzenia.
 
 ## Stan i dalsza praca
 
@@ -21,4 +21,4 @@ Pełna mapa: [docs/widoki.md](docs/widoki.md). Architektura, etapy i kryteria: [
 
 Nie wpisuj kluczy usług analizy zdjęć do aplikacji ani repozytorium. Zdjęcia i historia są danymi użytkownika; ich eksport/usuwanie oraz zasady wysyłania zostaną ukończone przed wydaniem.
 
-Dystrybucja bez Maca: [SideStore, GitHub Actions i Raspberry Pi](docs/dystrybucja.md). Plik IPA z CI jest instalowany i podpisywany przez SideStore na iPhonie. Raspberry Pi może przechowywać kolejne wersje przez Tailscale, ale nie odnawia sama podpisu SideStore.
+Dystrybucja bez Maca: [SideStore, GitHub Actions i Raspberry Pi](docs/dystrybucja.md). Pi udostępnia IPA pod `/app/` lokalnie i przez Tailscale. Podpis i jego odświeżenie wykonuje SideStore na iPhonie; po wygaśnięciu samego SideStore może być potrzebny ponowny iloader.

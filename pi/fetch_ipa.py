@@ -63,9 +63,22 @@ def main() -> int:
     if not candidates:
         print("No main-branch IPA artifact is available yet", file=sys.stderr)
         return 1
-    latest = max(candidates, key=lambda a: a.get("created_at", ""))
+    latest = None
+    for artifact in sorted(candidates, key=lambda a: a.get("created_at", ""), reverse=True):
+        run_id = (artifact.get("workflow_run") or {}).get("id")
+        if not run_id:
+            continue
+        run = json.loads(request(f"{API}/repos/{quote(repo, safe='/')}/actions/runs/{run_id}", token))
+        if run.get("conclusion") == "success" and run.get("head_branch") == "main":
+            latest = artifact
+            break
+    if latest is None:
+        print("No successful main-branch IPA artifact is available yet", file=sys.stderr)
+        return 1
     info_file = target / "build.json"
-    if info_file.exists() and json.loads(info_file.read_text()).get("artifact_id") == latest["id"]:
+    if (info_file.exists() and (target / "Pedy.ipa").is_file()
+            and (target / "Pedy.sha256").is_file()
+            and json.loads(info_file.read_text()).get("artifact_id") == latest["id"]):
         print("Already current")
         return 0
 
@@ -89,12 +102,19 @@ def main() -> int:
         staged = Path(handle.name)
     staged.chmod(0o644)
     staged.replace(target / "Pedy.ipa")
-    info_file.write_text(json.dumps({
+    info = json.dumps({
         "artifact_id": latest["id"],
+        "run_id": run_id,
         "created_at": latest["created_at"],
         "sha256": digest,
         "size_bytes": len(ipa),
-    }, indent=2) + "\n")
+    }, indent=2) + "\n"
+    (target / "Pedy.sha256").write_text(f"{digest}  Pedy.ipa\n")
+    with tempfile.NamedTemporaryFile(mode="w", dir=target, prefix=".build-", delete=False) as handle:
+        handle.write(info)
+        staged_info = Path(handle.name)
+    staged_info.chmod(0o644)
+    staged_info.replace(info_file)
     print(f"Updated artifact {latest['id']} SHA256 {digest}")
     return 0
 
