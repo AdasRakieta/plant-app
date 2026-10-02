@@ -43,6 +43,8 @@ Automatyzacja Skrótów uruchamiana po dołączeniu do domowego Wi-Fi może przy
 
 SideStore zgłaszał błąd parametru `appIdName` dla nazwy `Pędy`. Dlatego nazwa pakietu i nazwa aplikacji w źródle są teraz ASCII: `Pedy`; nazwa strony i interfejsu pozostaje „Pędy”. Identyfikator aplikacji `pl.pedy.app` nie zmienia się. Nowy IPA zawiera ikonę oraz `CFBundleShortVersionString` i `CFBundleVersion`, których źródło wymaga do pokazywania aktualizacji.
 
+**Naprawa starego źródła na Pi:** po pobraniu zmian uruchomić z katalogu repozytorium `sudo bash pi/install.sh`. Skrypt zachowuje istniejący token, instaluje aktualny pobieracz i od razu uruchamia pobranie. Pobieracz zapisuje w `build.json` wersję formatu źródła, więc przy pierwszym uruchomieniu po tej zmianie pobiera bieżący artefakt i nadpisuje oba pliki źródłowe. Przed ponownym dodaniem źródła otworzyć w Safari właściwy adres `source-local.json` albo `source.json` i potwierdzić, że zarówno `name`, jak i `apps[0].name` mają wartość `Pedy` — bez `ę`.
+
 **Po wygaśnięciu:** jeśli wygasły Pędy, a SideStore działa, włączyć Wi-Fi i LocalDevVPN oraz spróbować odświeżyć lub ponownie wgrać tę samą wersję IPA bez usuwania aplikacji. Jeśli wygasł sam SideStore i nie otwiera się, trzeba zainstalować go ponownie przez iloader na komputerze, potem odświeżyć Pędy. Gdy wygasł plik parowania, utworzyć go ponownie w iloader. Pi i lokalne połączenie nie mogą samodzielnie wskrzesić wygasłego SideStore.
 
 ## Warunki odbioru

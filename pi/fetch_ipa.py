@@ -22,6 +22,7 @@ import zipfile
 
 API = "https://api.github.com"
 NAME = "pedy-unsigned-ipa"
+SOURCE_FORMAT_VERSION = 1
 TAIL_BASE = "https://malina.tail384b18.ts.net/app"
 LAN_BASE = "http://192.168.1.218:8787/app"
 
@@ -125,7 +126,8 @@ def main() -> int:
             and (target / "Pedy.sha256").is_file()
             and (target / "source.json").is_file()
             and (target / "source-local.json").is_file()
-            and json.loads(info_file.read_text()).get("artifact_id") == latest["id"]):
+            and json.loads(info_file.read_text()).get("artifact_id") == latest["id"]
+            and json.loads(info_file.read_text()).get("source_format_version") == SOURCE_FORMAT_VERSION):
         print("Already current")
         return 0
 
@@ -160,6 +162,7 @@ def main() -> int:
         "artifact_id": latest["id"],
         "run_id": run_id,
         "created_at": latest["created_at"],
+        "source_format_version": SOURCE_FORMAT_VERSION,
         "version": str(version),
         "build_version": str(build),
         "sha256": digest,
