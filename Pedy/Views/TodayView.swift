@@ -32,20 +32,16 @@ struct TodayView: View {
                     NavigationLink {
                         SessionView(session: first, plants: plants)
                     } label: {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("NAJBLIŻSZA SESJA")
-                                .font(.caption.weight(.semibold))
-                            Text(first.date, format: .dateTime.weekday(.wide).day().month(.wide))
-                                .font(.title2.bold())
-                            Text("\(first.tasks.count) \(first.tasks.count == 1 ? "roślina" : first.tasks.count < 5 ? "rośliny" : "roślin") · wspólna kontrola")
-                            Label("Zobacz plan", systemImage: "arrow.right")
-                                .font(.headline)
-                                .padding(.top, 12)
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(24)
-                        .background(Palette.terracotta, in: RoundedRectangle(cornerRadius: 24))
+                        ZStack(alignment: .leading) {
+                            Image("plant-hero").resizable().scaledToFill().frame(height: 250).clipped()
+                            LinearGradient(colors: [Palette.terracotta.opacity(0.96), Palette.terracotta.opacity(0.56)], startPoint: .leading, endPoint: .trailing)
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("NAJBLIŻSZA SESJA").font(.caption.weight(.semibold))
+                                Text(first.date, format: .dateTime.weekday(.wide).day().month(.wide)).font(.title2.bold())
+                                Text("\(first.tasks.count) \(first.tasks.count == 1 ? "roślina" : first.tasks.count < 5 ? "rośliny" : "roślin") · wspólna kontrola")
+                                Label("Zobacz plan", systemImage: "arrow.right").font(.headline).padding(.top, 12)
+                            }.foregroundStyle(.white).padding(24)
+                        }.clipShape(RoundedRectangle(cornerRadius: 26))
                     }
                     .buttonStyle(.plain)
 
@@ -59,9 +55,7 @@ struct TodayView: View {
                                 CareDetailView(plant: plant)
                             } label: {
                                 HStack {
-                                    Image(systemName: "leaf")
-                                        .frame(width: 42, height: 42)
-                                        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12))
+                                    PlantThumbnail()
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(plant.name).font(.headline)
                                         Text("Sprawdź podłoże").font(.subheadline).foregroundStyle(.secondary)

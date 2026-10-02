@@ -13,10 +13,7 @@ struct CareDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 HStack(spacing: 14) {
-                    Image(systemName: "leaf.fill")
-                        .font(.title)
-                        .frame(width: 64, height: 64)
-                        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16))
+                    PlantThumbnail()
                     VStack(alignment: .leading) {
                         Text(plant.name).font(.title2.bold())
                         Text(plant.room.isEmpty ? "Moja roślina" : plant.room)
@@ -30,10 +27,9 @@ struct CareDetailView: View {
                     .foregroundStyle(.secondary)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Jak to sprawdzić?")
-                        .font(.title3.bold())
-                        .foregroundStyle(Palette.terracotta)
-                    Text("Sprawdź podłoże także pod powierzchnią. Oceń, czy jest nadal wilgotne, czy już suche. Szczegółowy próg przesuszenia zostanie dodany wraz ze zweryfikowanymi wymaganiami gatunku.")
+                    Image("plant-hero").resizable().scaledToFill().frame(height: 170).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
+                    Text("Jak to sprawdzić?").font(.title3.bold()).foregroundStyle(Palette.terracotta)
+                    Text("Sprawdź podłoże także pod powierzchnią. Oceń, czy jest nadal wilgotne, czy już suche. \(PlantSpecies.match(plant.speciesName)?.watering ?? "Nie podlewaj tylko według kalendarza.")")
                     if plant.speciesName.isEmpty {
                         Text("Gatunek tej rośliny nie został jeszcze określony.")
                             .font(.footnote)

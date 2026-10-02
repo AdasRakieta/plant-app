@@ -18,14 +18,15 @@ struct PlantsView: View {
                     NavigationLink {
                         PlantDetailView(plant: plant)
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(plant.name).font(.headline)
-                            Text([plant.speciesName, plant.room].filter { !$0.isEmpty }.joined(separator: " · "))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text("Kontrola: \(plant.nextCheckDate.formatted(date: .abbreviated, time: .omitted))")
-                                .font(.caption)
-                                .foregroundStyle(Palette.terracotta)
+                        HStack(spacing: 12) {
+                            PlantThumbnail()
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(plant.name).font(.headline)
+                                Text([plant.speciesName, plant.room].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.subheadline).foregroundStyle(.secondary)
+                                Text("Kontrola: \(plant.nextCheckDate.formatted(date: .abbreviated, time: .omitted))")
+                                    .font(.caption).foregroundStyle(Palette.terracotta)
+                            }
                         }
                         .padding(.vertical, 5)
                     }
@@ -55,12 +56,22 @@ struct AddPlantView: View {
 
     private var validName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
+    init(species: PlantSpecies? = nil) {
+        _speciesName = State(initialValue: species?.commonName ?? "")
+        _checkIntervalDays = State(initialValue: species?.intervalDays ?? 3)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Roślina") {
                     TextField("Własna nazwa", text: $name)
-                    TextField("Gatunek, jeśli znasz", text: $speciesName)
+                    Picker("Gatunek", selection: $speciesName) {
+                        Text("Wybierz później").tag("")
+                        ForEach(PlantSpecies.catalog) { item in
+                            Text(item.commonName).tag(item.commonName)
+                        }
+                    }
                     TextField("Pomieszczenie", text: $room)
                 }
                 Section("Kontrola podłoża") {
