@@ -56,7 +56,7 @@ struct SpeciesDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Image("plant-hero").resizable().scaledToFill().frame(height: 220).clipped().clipShape(RoundedRectangle(cornerRadius: 24))
+                    Image("PlantHero").resizable().scaledToFill().frame(height: 220).clipped().clipShape(RoundedRectangle(cornerRadius: 24))
                     Text(species.commonName).font(.largeTitle.bold())
                     Text(species.latinName).italic().foregroundStyle(.secondary)
                     Text(species.summary).font(.body)
@@ -77,6 +77,6 @@ struct SpeciesDetailView: View {
 
 struct PlantThumbnail: View {
     var body: some View {
-        Image("plant-hero").resizable().scaledToFill().frame(width: 64, height: 64).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
+        Image("PlantHero").resizable().scaledToFill().frame(width: 64, height: 64).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

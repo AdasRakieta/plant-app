@@ -33,7 +33,7 @@ struct TodayView: View {
                         SessionView(session: first, plants: plants)
                     } label: {
                         ZStack(alignment: .leading) {
-                            Image("plant-hero").resizable().scaledToFill().frame(height: 250).clipped()
+                            Image("PlantHero").resizable().scaledToFill().frame(height: 250).clipped()
                             LinearGradient(colors: [Palette.terracotta.opacity(0.96), Palette.terracotta.opacity(0.56)], startPoint: .leading, endPoint: .trailing)
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("NAJBLIŻSZA SESJA").font(.caption.weight(.semibold))

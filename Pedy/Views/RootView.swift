@@ -24,5 +24,6 @@ struct RootView: View {
             .tabItem { Label("Diagnoza", systemImage: "cross.case") }
         }
         .tint(Palette.terracotta)
+        .preferredColorScheme(.light)
     }
 }
