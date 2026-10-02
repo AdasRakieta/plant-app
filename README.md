@@ -21,4 +21,4 @@ Pełna mapa: [docs/widoki.md](docs/widoki.md). Architektura, etapy i kryteria: [
 
 Nie wpisuj kluczy usług analizy zdjęć do aplikacji ani repozytorium. Zdjęcia i historia są danymi użytkownika; ich eksport/usuwanie oraz zasady wysyłania zostaną ukończone przed wydaniem.
 
-Dystrybucja bez Maca: [SideStore, GitHub Actions i Raspberry Pi](docs/dystrybucja.md). Pi udostępnia IPA pod `/app/` lokalnie i przez Tailscale. Podpis i jego odświeżenie wykonuje SideStore na iPhonie; po wygaśnięciu samego SideStore może być potrzebny ponowny iloader.
+Dystrybucja bez Maca: [SideStore, GitHub Actions i Raspberry Pi](docs/dystrybucja.md). Pi udostępnia stronę, IPA i źródło SideStore pod `/app/` lokalnie i przez Tailscale. Podpis i jego odświeżenie wykonuje SideStore na iPhonie; po wygaśnięciu samego SideStore może być potrzebny ponowny iloader.

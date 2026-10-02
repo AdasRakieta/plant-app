@@ -12,6 +12,11 @@ FILES = {
     "/app/Pedy.ipa": ("Pedy.ipa", "application/octet-stream"),
     "/app/build.json": ("build.json", "application/json; charset=utf-8"),
     "/app/Pedy.sha256": ("Pedy.sha256", "text/plain; charset=utf-8"),
+    "/app/source.json": ("source.json", "application/json; charset=utf-8"),
+    "/app/source-local.json": ("source-local.json", "application/json; charset=utf-8"),
+    "/app/icon.png": ("icon.png", "image/png"),
+    "/app/": ("index.html", "text/html; charset=utf-8"),
+    "/app/index.html": ("index.html", "text/html; charset=utf-8"),
 }
 
 
@@ -29,21 +34,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Location", "/app/")
             self.end_headers()
             return
-        if path == "/app/":
-            body = ("<!doctype html><html lang=pl><meta charset=utf-8>"
-                    "<meta name=viewport content='width=device-width,initial-scale=1'>"
-                    "<title>Pędy — IPA</title><body><h1>Pędy</h1>"
-                    "<p><a href='Pedy.ipa' download>Pobierz najnowsze IPA</a></p>"
-                    "<p>Po pobraniu otwórz plik w SideStore przy włączonych Wi-Fi i LocalDevVPN.</p>"
-                    "<p><a href='build.json'>Informacje o buildzie</a></p></body></html>").encode()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            if not head_only:
-                self.wfile.write(body)
-            return
         if path not in FILES:
             self.send_error(404)
             return
@@ -56,7 +46,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(size))
-            self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+            if filename == "Pedy.ipa":
+                self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             if not head_only:

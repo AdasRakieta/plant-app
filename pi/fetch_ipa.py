@@ -10,6 +10,7 @@ import io
 import json
 import os
 from pathlib import Path
+import plistlib
 import sys
 import tempfile
 from urllib.error import HTTPError, URLError
@@ -21,6 +22,50 @@ import zipfile
 
 API = "https://api.github.com"
 NAME = "pedy-unsigned-ipa"
+TAIL_BASE = "https://malina.tail384b18.ts.net/app"
+LAN_BASE = "http://192.168.1.218:8787/app"
+
+
+def source_document(base: str, bundle: str, version: str, build: str,
+                    date: str, size: int, digest: str) -> dict:
+    return {
+        "name": "Pedy",
+        "identifier": "pl.pedy.source",
+        "subtitle": "Prywatne wersje aplikacji Pedy",
+        "description": "Aplikacja do planowania pielęgnacji roślin domowych.",
+        "iconURL": f"{base}/icon.png",
+        "website": f"{base}/",
+        "tintColor": "#3C523F",
+        "apps": [{
+            "name": "Pedy",
+            "bundleIdentifier": bundle,
+            "developerName": "AdasRakieta",
+            "subtitle": "Pielęgnacja roślin domowych",
+            "localizedDescription": "Lokalna kolekcja roślin i plan kontroli podłoża.",
+            "iconURL": f"{base}/icon.png",
+            "tintColor": "#3C523F",
+            "category": "lifestyle",
+            "appPermissions": {"entitlements": [], "privacy": {}},
+            "versions": [{
+                "version": version,
+                "buildVersion": build,
+                "date": date,
+                "downloadURL": f"{base}/Pedy.ipa",
+                "size": size,
+                "sha256": digest,
+                "minOSVersion": "17.0",
+            }],
+        }],
+    }
+
+
+def atomic_text(target: Path, content: str) -> None:
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=target.parent,
+                                     prefix=f".{target.name}-", delete=False) as handle:
+        handle.write(content)
+        staged = Path(handle.name)
+    staged.chmod(0o644)
+    staged.replace(target)
 
 
 def request(url: str, token: str) -> bytes:
@@ -78,6 +123,8 @@ def main() -> int:
     info_file = target / "build.json"
     if (info_file.exists() and (target / "Pedy.ipa").is_file()
             and (target / "Pedy.sha256").is_file()
+            and (target / "source.json").is_file()
+            and (target / "source-local.json").is_file()
             and json.loads(info_file.read_text()).get("artifact_id") == latest["id"]):
         print("Already current")
         return 0
@@ -95,6 +142,13 @@ def main() -> int:
     with zipfile.ZipFile(io.BytesIO(ipa)) as zipped:
         if "Payload/Pedy.app/Info.plist" not in zipped.namelist():
             raise ValueError("IPA has no Pedy.app payload")
+        app_info = plistlib.loads(zipped.read("Payload/Pedy.app/Info.plist"))
+    bundle = app_info.get("CFBundleIdentifier")
+    version = app_info.get("CFBundleShortVersionString")
+    build = app_info.get("CFBundleVersion")
+    display_name = app_info.get("CFBundleDisplayName", "")
+    if bundle != "pl.pedy.app" or not version or not build or not display_name.isascii():
+        raise ValueError("IPA has unexpected bundle metadata or non-ASCII display name")
 
     digest = hashlib.sha256(ipa).hexdigest()
     with tempfile.NamedTemporaryFile(dir=target, prefix=".pedy-", delete=False) as handle:
@@ -106,15 +160,17 @@ def main() -> int:
         "artifact_id": latest["id"],
         "run_id": run_id,
         "created_at": latest["created_at"],
+        "version": str(version),
+        "build_version": str(build),
         "sha256": digest,
         "size_bytes": len(ipa),
     }, indent=2) + "\n"
-    (target / "Pedy.sha256").write_text(f"{digest}  Pedy.ipa\n")
-    with tempfile.NamedTemporaryFile(mode="w", dir=target, prefix=".build-", delete=False) as handle:
-        handle.write(info)
-        staged_info = Path(handle.name)
-    staged_info.chmod(0o644)
-    staged_info.replace(info_file)
+    atomic_text(target / "Pedy.sha256", f"{digest}  Pedy.ipa\n")
+    for filename, base in (("source.json", TAIL_BASE), ("source-local.json", LAN_BASE)):
+        source = source_document(base, bundle, str(version), str(build),
+                                 latest["created_at"], len(ipa), digest)
+        atomic_text(target / filename, json.dumps(source, ensure_ascii=False, indent=2) + "\n")
+    atomic_text(info_file, info)
     print(f"Updated artifact {latest['id']} SHA256 {digest}")
     return 0
 

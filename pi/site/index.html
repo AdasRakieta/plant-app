@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#163d2b">
+  <title>Pędy — pobierz aplikację</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <style>
+    :root{color-scheme:light;--forest:#163d2b;--pine:#27573c;--cream:#f6f2e9;--ink:#1b3026;--muted:#65796b;--line:#dce3d7;--clay:#d88d65}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--cream);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    a{color:inherit}
+    .shell{min-height:100vh;overflow:hidden;position:relative}
+    .shell:before,.shell:after{content:"";position:absolute;pointer-events:none;border-radius:50%;filter:blur(2px)}
+    .shell:before{width:520px;height:520px;background:#e5eadc;top:160px;left:-300px}
+    .shell:after{width:420px;height:420px;background:#e8d8c6;right:-260px;bottom:0}
+    .wrap{width:min(1100px,calc(100% - 40px));margin:auto;position:relative;z-index:1}
+    header{display:flex;align-items:center;justify-content:space-between;padding:30px 0}
+    .brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-weight:800;letter-spacing:-.04em;font-size:25px;color:var(--forest)}
+    .brand img{width:38px;height:38px;border-radius:11px}
+    .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:var(--pine)}
+    .navnote{font-size:13px;color:var(--muted);font-weight:600}
+    main{display:grid;grid-template-columns:1.04fr .96fr;align-items:center;gap:70px;padding:68px 0 86px}
+    h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(56px,7vw,102px);line-height:.96;letter-spacing:-.055em;margin:18px 0 25px;color:var(--forest);font-weight:500}
+    .intro{font-size:clamp(17px,1.7vw,21px);color:#496253;max-width:560px;margin:0 0 34px}
+    .actions{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 28px}
+    .button{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:55px;padding:0 23px;border-radius:17px;font-size:15px;font-weight:750;text-decoration:none;transition:transform .18s,background .18s,box-shadow .18s}
+    .button:hover{transform:translateY(-2px)}
+    .button:focus-visible,.textlink:focus-visible{outline:3px solid var(--clay);outline-offset:4px}
+    .primary{background:var(--forest);color:#fff;box-shadow:0 10px 22px #163d2b26}
+    .primary:hover{background:#245239}
+    .secondary{background:#fff;color:var(--forest);border:1px solid var(--line)}
+    .secondary:hover{background:#f8fbf5}
+    .button svg{width:19px;height:19px;flex:none}
+    .smallprint{font-size:13px;color:var(--muted);max-width:550px}
+    .smallprint strong{color:var(--forest)}
+    .visual{position:relative;display:grid;place-items:center;min-height:490px}
+    .halo{position:absolute;width:min(100%,470px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#e4ebd7 0 53%,#eaf0df 53% 54%,transparent 54%);transform:translateY(10px)}
+    .appcard{position:relative;width:min(100%,370px);padding:26px 28px 24px;border:1px solid #ffffffde;border-radius:30px;background:#ffffffd9;box-shadow:0 28px 70px #23452b1b;backdrop-filter:blur(12px);transform:rotate(-4deg)}
+    .appcard .icon{width:132px;height:132px;display:block;margin:2px auto 25px;border-radius:29px;box-shadow:0 16px 25px #163d2b30}
+    .appname{font-family:Georgia,"Times New Roman",serif;font-size:33px;line-height:1.1;margin:0;color:var(--forest)}
+    .appdesc{font-size:14px;color:var(--muted);margin:9px 0 20px}
+    .rule{height:1px;background:var(--line);margin:0 0 18px}
+    .meta{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+    .meta b{color:var(--forest)}
+    .leaf{position:absolute;width:80px;height:145px;background:#6e9b6f;border-radius:90% 0 90% 0;opacity:.22;transform:rotate(43deg);right:3%;top:2%}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 0 70px}
+    .step{background:#fff9;border:1px solid #e2e7dc;border-radius:23px;padding:23px}
+    .num{display:grid;place-items:center;width:35px;height:35px;border-radius:50%;background:#e3ecdb;color:var(--pine);font-weight:800;font-size:14px}
+    .step h2{font-size:17px;letter-spacing:-.02em;margin:16px 0 7px;color:var(--forest)}
+    .step p{font-size:14px;color:var(--muted);margin:0}
+    .details{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;border-top:1px solid #d8ded2;padding:25px 0 35px;color:var(--muted);font-size:13px}
+    .textlink{color:var(--forest);text-underline-offset:3px;font-weight:700}
+    .details span:first-child{margin-right:auto}
+    @media(max-width:800px){main{grid-template-columns:1fr;gap:15px;padding:30px 0 42px}.visual{min-height:395px}.appcard{width:300px}.halo{width:360px}.steps{grid-template-columns:1fr}.navnote{display:none}}
+    @media(max-width:480px){.wrap{width:min(100% - 28px,1100px)}header{padding:18px 0}.actions{display:grid}.button{width:100%}.visual{min-height:360px}.appcard{width:270px;padding:22px}.appcard .icon{width:110px;height:110px}.step{padding:19px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.button{transition:none}}
+  </style>
+</head>
+<body>
+  <div class="shell"><div class="wrap">
+    <header><a class="brand" href="./"><img src="icon.png" alt="">Pędy</a><span class="navnote">Twoje rośliny. Twój rytm.</span></header>
+    <main>
+      <section>
+        <div class="eyebrow">Aplikacja na iPhone</div>
+        <h1>Roślinom<br>na zdrowie.</h1>
+        <p class="intro">Zapisuj swoje rośliny, planuj kontrole podłoża i pielęgnuj je we własnym tempie. Pobierz najnowszą wersję Pędów prosto na iPhone'a.</p>
+        <div class="actions">
+          <a class="button primary" href="Pedy.ipa" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>Pobierz IPA</a>
+          <a class="button secondary" id="source-button" href="source-local.json"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v16H5zM9 8h6M9 12h6M9 16h4"/></svg>Dodaj źródło SideStore</a>
+        </div>
+        <p class="smallprint"><strong>Instalacja i odświeżanie:</strong> SideStore potrzebuje Wi‑Fi oraz LocalDevVPN. Po pobraniu IPA przez Tailscale przełącz VPN na LocalDevVPN, a potem otwórz plik w SideStore.</p>
+      </section>
+      <div class="visual" aria-label="Ikona aplikacji Pędy"><div class="halo"></div><div class="leaf"></div><div class="appcard"><img class="icon" src="icon.png" alt="Sadzonka na zielonym tle"><p class="appname">Pędy</p><p class="appdesc">Małe kroki, piękne rośliny.</p><div class="rule"></div><div class="meta"><span>Wersja <b id="version">—</b></span><span>iOS 17+</span></div></div></div>
+    </main>
+    <section class="steps" aria-label="Jak zainstalować">
+      <div class="step"><div class="num">1</div><h2>Pobierz aplikację</h2><p>Wybierz IPA lub dodaj źródło Pedy w SideStore. Przy domowym Wi‑Fi użyj adresu lokalnego.</p></div>
+      <div class="step"><div class="num">2</div><h2>Otwórz w SideStore</h2><p>Włącz LocalDevVPN. SideStore podpisze aplikację Twoim kontem Apple i zainstaluje ją na telefonie.</p></div>
+      <div class="step"><div class="num">3</div><h2>Dbaj bez przerwy</h2><p>Sprawdzaj ważność podpisów w SideStore i pozwól mu odświeżać aplikacje w tle.</p></div>
+    </section>
+    <footer class="details"><span>Wersja testowa · prywatna dystrybucja</span><a class="textlink" id="source-json" href="source-local.json">Adres źródła</a><a class="textlink" href="build.json">Informacje o buildzie</a><a class="textlink" href="Pedy.sha256">SHA-256</a></footer>
+  </div></div>
+  <script>
+    const local = location.protocol === 'http:';
+    const sourceName = local ? 'source-local.json' : 'source.json';
+    const sourceUrl = new URL(sourceName, location.href).href;
+    document.getElementById('source-button').href = 'sidestore://source?url=' + encodeURIComponent(sourceUrl);
+    document.getElementById('source-json').href = sourceName;
+    fetch('build.json', {cache:'no-store'}).then(r => r.ok ? r.json() : null).then(data => {
+      if (data && data.version) document.getElementById('version').textContent = data.version + ' (' + data.build_version + ')';
+    }).catch(() => {});
+  </script>
+</body>
+</html>

@@ -6,7 +6,7 @@ if [[ ${EUID} -ne 0 ]]; then
   echo 'Uruchom: sudo bash pi/install.sh' >&2
   exit 2
 fi
-if [[ ! -f pi/fetch_ipa.py || ! -f pi/serve_ipa.py || ! -f pi/pedy-fetch.service || ! -f pi/pedy-fetch.timer || ! -f pi/pedy-serve.service ]]; then
+if [[ ! -f pi/fetch_ipa.py || ! -f pi/serve_ipa.py || ! -f pi/pedy-fetch.service || ! -f pi/pedy-fetch.timer || ! -f pi/pedy-serve.service || ! -f pi/site/index.html || ! -f pi/site/icon.png ]]; then
   echo 'Uruchom skrypt z głównego katalogu repozytorium plant-app.' >&2
   exit 2
 fi
@@ -22,6 +22,8 @@ if ! id pedy >/dev/null 2>&1; then
 fi
 install -d -o root -g root -m 0755 /opt/pedy
 install -d -o pedy -g pedy -m 0755 /srv/pedy
+install -o pedy -g pedy -m 0644 pi/site/index.html /srv/pedy/index.html
+install -o pedy -g pedy -m 0644 pi/site/icon.png /srv/pedy/icon.png
 install -d -o root -g root -m 0700 /etc/pedy
 install -o root -g root -m 0755 pi/fetch_ipa.py /opt/pedy/fetch_ipa.py
 install -o root -g root -m 0755 pi/serve_ipa.py /opt/pedy/serve_ipa.py

@@ -21,7 +21,7 @@ jobs:
           xcodebuild build -project Pedy.xcodeproj -scheme Pedy -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
       - name: Build unsigned device application
         run: |
-          xcodebuild build -project Pedy.xcodeproj -scheme Pedy -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/pedy-build" CODE_SIGNING_ALLOWED=NO
+          xcodebuild build -project Pedy.xcodeproj -scheme Pedy -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/pedy-build" CODE_SIGNING_ALLOWED=NO CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
           mkdir -p "$RUNNER_TEMP/pedy-ipa/Payload"
           cp -R "$RUNNER_TEMP/pedy-build/Build/Products/Release-iphoneos/Pedy.app" "$RUNNER_TEMP/pedy-ipa/Payload/Pedy.app"
           cd "$RUNNER_TEMP/pedy-ipa"
