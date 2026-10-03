@@ -35,7 +35,7 @@ def ollama(prompt, image=None):
         return raw.strip()
     except urllib.error.HTTPError as exc:
         raise RuntimeError("Model AI nie jest jeszcze gotowy na serwerze.") from exc
-    except (urllib.error.URLError, KeyError, ValueError) as exc:
+    except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError) as exc:
         raise RuntimeError("Lokalny model AI nie odpowiedział. Spróbuj ponownie za chwilę.") from exc
 
 def safe_fallback(symptom):
