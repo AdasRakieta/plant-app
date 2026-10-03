@@ -1,0 +1,20 @@
+[Unit]
+Description=Pedy private local vision AI bridge
+Wants=network-online.target ollama.service
+After=network-online.target ollama.service
+
+[Service]
+User=pedy
+Group=pedy
+Environment=PEDY_AI_PORT=8788
+Environment=PEDY_VISION_MODEL=llava:7b
+ExecStart=/usr/bin/python3 /opt/pedy/ai_server.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

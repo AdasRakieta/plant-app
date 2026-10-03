@@ -6,7 +6,7 @@ if [[ ${EUID} -ne 0 ]]; then
   echo 'Uruchom: sudo bash pi/install.sh' >&2
   exit 2
 fi
-if [[ ! -f pi/fetch_ipa.py || ! -f pi/serve_ipa.py || ! -f pi/pedy-fetch.service || ! -f pi/pedy-fetch.timer || ! -f pi/pedy-serve.service || ! -f pi/site/index.html || ! -f pi/site/icon.png ]]; then
+if [[ ! -f pi/fetch_ipa.py || ! -f pi/serve_ipa.py || ! -f pi/ai_server.py || ! -f pi/pedy-fetch.service || ! -f pi/pedy-fetch.timer || ! -f pi/pedy-serve.service || ! -f pi/pedy-ai.service || ! -f pi/site/index.html || ! -f pi/site/icon.png ]]; then
   echo 'Uruchom skrypt z głównego katalogu repozytorium plant-app.' >&2
   exit 2
 fi
@@ -27,9 +27,11 @@ install -o pedy -g pedy -m 0644 pi/site/icon.png /srv/pedy/icon.png
 install -d -o root -g root -m 0700 /etc/pedy
 install -o root -g root -m 0755 pi/fetch_ipa.py /opt/pedy/fetch_ipa.py
 install -o root -g root -m 0755 pi/serve_ipa.py /opt/pedy/serve_ipa.py
+install -o root -g root -m 0755 pi/ai_server.py /opt/pedy/ai_server.py
 install -o root -g root -m 0644 pi/pedy-fetch.service /etc/systemd/system/pedy-fetch.service
 install -o root -g root -m 0644 pi/pedy-fetch.timer /etc/systemd/system/pedy-fetch.timer
 install -o root -g root -m 0644 pi/pedy-serve.service /etc/systemd/system/pedy-serve.service
+install -o root -g root -m 0644 pi/pedy-ai.service /etc/systemd/system/pedy-ai.service
 
 if [[ ! -s /etc/pedy/github.env ]]; then
   if [[ ! -t 0 ]]; then
@@ -62,8 +64,10 @@ systemctl start pedy-fetch.service
 test -s /srv/pedy/Pedy.ipa
 systemctl enable pedy-serve.service
 systemctl restart pedy-serve.service
+systemctl enable --now pedy-ai.service
 echo 'IPA pobrane do /srv/pedy/Pedy.ipa; sprawdź: systemctl status pedy-fetch.timer'
 echo 'Sieć lokalna: http://<adres-IP-maliny>:8787/app/'
+echo 'Lokalne AI: http://<adres-IP-maliny>:8788/health (tylko LAN/Tailscale)'
 
 if ! command -v tailscale >/dev/null 2>&1; then
   echo 'Tailscale nie jest zainstalowany. Po instalacji i tailscale up uruchom: sudo tailscale serve --bg --set-path=/app /srv/pedy'

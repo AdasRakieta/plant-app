@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
+import UIKit
 
 struct PlantsView: View {
     @Query(sort: \Plant.name) private var plants: [Plant]
@@ -53,6 +55,11 @@ struct AddPlantView: View {
     @State private var nextCheckDate = Date()
     @State private var checkIntervalDays = 3
     @State private var saveError: String?
+    @State private var photoItem: PhotosPickerItem?
+    @State private var photoImage: UIImage?
+    @State private var candidates: [AIPlantCandidate] = []
+    @State private var isRecognising = false
+    @State private var recognitionError: String?
 
     private var validName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -66,6 +73,34 @@ struct AddPlantView: View {
             Form {
                 Section("Roślina") {
                     TextField("Własna nazwa", text: $name)
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        Label(photoImage == nil ? "Wybierz zdjęcie do rozpoznania" : "Zmień zdjęcie", systemImage: "camera.viewfinder")
+                    }
+                    if photoImage != nil {
+                        Button { Task { await recognisePlant() } } label: {
+                            Label(isRecognising ? "Rozpoznaję lokalnie…" : "Rozpoznaj gatunek lokalnie", systemImage: "sparkles")
+                        }.disabled(isRecognising)
+                    }
+                    if let recognitionError { Text(recognitionError).font(.footnote).foregroundStyle(Palette.terracotta) }
+                    if !candidates.isEmpty {
+                        Text("Potwierdź gatunek — AI nie zapisuje go samodzielnie.").font(.footnote).foregroundStyle(.secondary)
+                        ForEach(candidates) { candidate in
+                            Button {
+                                speciesName = PlantSpecies.catalog.first(where: { $0.id == candidate.speciesID })?.commonName ?? candidate.commonName
+                                if name.isEmpty { name = speciesName }
+                                if let species = PlantSpecies.match(speciesName) { checkIntervalDays = species.intervalDays }
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text(candidate.commonName)
+                                        if let latin = candidate.latinName { Text(latin).font(.caption).italic() }
+                                    }
+                                    Spacer()
+                                    Text("\(Int(candidate.confidence * 100))%")
+                                }
+                            }.foregroundStyle(Palette.forest)
+                        }
+                    }
                     Picker("Gatunek", selection: $speciesName) {
                         Text("Wybierz później").tag("")
                         ForEach(PlantSpecies.catalog) { item in
@@ -110,6 +145,7 @@ struct AddPlantView: View {
             }
         }
         .tint(Palette.terracotta)
+        .onChange(of: photoItem) { _, item in Task { await loadPhoto(item) } }
         .alert("Błąd zapisu", isPresented: Binding(
             get: { saveError != nil },
             set: { if !$0 { saveError = nil } }
@@ -118,6 +154,28 @@ struct AddPlantView: View {
         } message: {
             Text(saveError ?? "")
         }
+    }
+
+    @MainActor private func loadPhoto(_ item: PhotosPickerItem?) async {
+        guard let data = try? await item?.loadTransferable(type: Data.self), let data, let image = UIImage(data: data) else { return }
+        photoImage = image
+        candidates = []
+        recognitionError = nil
+    }
+
+    private func recognisePlant() async {
+        guard let photoImage else { return }
+        await MainActor.run { isRecognising = true; recognitionError = nil; candidates = [] }
+        do {
+            let identification = try await LocalPlantAIClient.shared.identify(image: photoImage)
+            await MainActor.run {
+                candidates = identification.candidates.filter { candidate in PlantSpecies.catalog.contains(where: { $0.id == candidate.speciesID }) }
+                if candidates.isEmpty { recognitionError = identification.uncertainty }
+            }
+        } catch {
+            await MainActor.run { recognitionError = error.localizedDescription }
+        }
+        await MainActor.run { isRecognising = false }
     }
 }
 
