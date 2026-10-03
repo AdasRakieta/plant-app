@@ -27,10 +27,10 @@ def ollama(prompt, image=None):
     message = {"role": "user", "content": prompt}
     if image:
         message["images"] = [image]
-    payload = json.dumps({"model": MODEL, "stream": False, "format": "json", "options": {"temperature": 0.1, "num_predict": 220}, "messages": [message]}).encode()
+    payload = json.dumps({"model": MODEL, "stream": False, "format": "json", "options": {"temperature": 0.1, "num_predict": 96}, "messages": [message]}).encode()
     req = urllib.request.Request(OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=55) as response:
+        with urllib.request.urlopen(req, timeout=30) as response:
             raw = json.load(response)["message"]["content"]
         return json.loads(raw)
     except urllib.error.HTTPError as exc:
@@ -80,11 +80,10 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/v1/identify":
                 if not isinstance(image, str) or len(image) < 100:
                     raise ValueError("Dodaj zdjęcie rośliny do rozpoznania.")
-                catalog = "; ".join(f"{i}: {n} ({latin})" for i, n, latin in CATALOG)
-                prompt = ("Rozpoznaj domową roślinę na zdjęciu. Wybieraj wyłącznie z katalogu: " + catalog + ". "
-                          "Zwróć WYŁĄCZNIE JSON: {candidates:[{speciesID,commonName,latinName,confidence,reason}],"
-                          "uncertainty,needsAnotherPhoto}. Daj maksymalnie 3 kandydaty. confidence 0..1. "
-                          "Jeśli nie masz pewności, powiedz to; nie zgaduj.")
+                catalog = "; ".join(f"{i}:{n}" for i, n, _ in CATALOG)
+                prompt = ("Rozpoznaj roślinę. Katalog: " + catalog + ". "
+                          "Tylko JSON {candidates:[{speciesID,commonName,latinName,confidence,reason}],uncertainty,needsAnotherPhoto}. "
+                          "Maksymalnie 2 kandydaty. Nie zgaduj.")
                 try:
                     result = ollama(prompt, image)
                 except RuntimeError:
@@ -100,10 +99,9 @@ class Handler(BaseHTTPRequestHandler):
             symptom = str(body.get("symptom", ""))[:200]
             species = str(body.get("speciesName", "nieustalony"))[:120]
             requirements = str(body.get("requirements", "brak dodatkowych danych"))[:1200]
-            prompt = ("Jesteś ostrożnym asystentem pielęgnacji roślin. Objaw: " + symptom + ". Gatunek: " + species + ". Własne wymagania użytkownika: " + requirements + ". "
-                      "Na podstawie zdjęcia, jeśli jest, podaj tylko bezpieczne, odwracalne kontrole; nie dawkuj chemii i nie nakazuj podlewania. "
-                      "Zwróć WYŁĄCZNIE JSON: {hypotheses:[{title,likelihood,evidence,safeChecks}],missingInformation:[string],uncertainty:string}. "
-                      "likelihood: niska, średnia lub wyższa. Maksymalnie 3 hipotezy.")
+            prompt = ("Objaw: " + symptom + ". Gatunek: " + species + ". Wymagania: " + requirements + ". "
+                      "Tylko bezpieczne kontrole, bez nakazu podlewania lub chemii. "
+                      "Tylko JSON {hypotheses:[{title,likelihood,evidence,safeChecks}],missingInformation:[string],uncertainty:string}. Maksymalnie 2 hipotezy.")
             try:
                 result = ollama(prompt, image)
             except RuntimeError:

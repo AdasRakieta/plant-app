@@ -49,8 +49,8 @@ actor LocalPlantAIClient {
     static let shared = LocalPlantAIClient()
     // Serwer jest dostępny wyłącznie w prywatnej sieci LAN/Tailscale, bez płatnego API.
     private let baseURLs = [
-        URL(string: "http://192.168.1.218:8788")!,
-        URL(string: "https://malina.tail384b18.ts.net/ai")!
+        URL(string: "https://malina.tail384b18.ts.net/ai")!,
+        URL(string: "http://192.168.1.218:8788")!
     ]
 
     func identify(image: UIImage) async throws -> PlantIdentification {
@@ -69,12 +69,13 @@ actor LocalPlantAIClient {
     }
 
     private func encodedImage(_ image: UIImage) throws -> String {
-        let longestSide: CGFloat = 1_600
+        // Moondream uses a small vision input; a compact image avoids slow VPN uploads.
+        let longestSide: CGFloat = 640
         let ratio = min(1, longestSide / max(image.size.width, image.size.height))
         let size = CGSize(width: image.size.width * ratio, height: image.size.height * ratio)
         let renderer = UIGraphicsImageRenderer(size: size)
         let scaled = renderer.image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
-        guard let data = scaled.jpegData(compressionQuality: 0.78), data.count <= 8_000_000 else {
+        guard let data = scaled.jpegData(compressionQuality: 0.65), data.count <= 1_000_000 else {
             throw LocalPlantAIError.invalidImage
         }
         return data.base64EncodedString()
@@ -82,26 +83,41 @@ actor LocalPlantAIClient {
 
     private func request<Response: Decodable>(path: String, body: [String: Any]) async throws -> Response {
         let data = try JSONSerialization.data(withJSONObject: body)
-        var lastError: Error = LocalPlantAIError.unavailable
+        guard let baseURL = await reachableBaseURL() else { throw LocalPlantAIError.unavailable }
+        do {
+            var request = URLRequest(url: endpoint(path, on: baseURL))
+            request.httpMethod = "POST"
+            request.timeoutInterval = 40
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = data
+            let (responseData, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw LocalPlantAIError.unavailable }
+            guard (200..<300).contains(http.statusCode) else {
+                let message = (try? JSONDecoder().decode(ServerError.self, from: responseData).error) ?? "Serwer AI zwrócił błąd (\(http.statusCode))."
+                throw LocalPlantAIError.server(message)
+            }
+            return try JSONDecoder().decode(Response.self, from: responseData)
+        } catch {
+            throw error
+        }
+    }
+
+    private func reachableBaseURL() async -> URL? {
         for baseURL in baseURLs {
             do {
-                var request = URLRequest(url: baseURL.appending(path: path))
-                request.httpMethod = "POST"
-                request.timeoutInterval = 75
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.httpBody = data
-                let (responseData, response) = try await URLSession.shared.data(for: request)
-                guard let http = response as? HTTPURLResponse else { throw LocalPlantAIError.unavailable }
-                guard (200..<300).contains(http.statusCode) else {
-                    let message = (try? JSONDecoder().decode(ServerError.self, from: responseData).error) ?? "Serwer AI zwrócił błąd (\(http.statusCode))."
-                    throw LocalPlantAIError.server(message)
-                }
-                return try JSONDecoder().decode(Response.self, from: responseData)
+                var request = URLRequest(url: endpoint("health", on: baseURL))
+                request.timeoutInterval = 3
+                let (_, response) = try await URLSession.shared.data(for: request)
+                if (response as? HTTPURLResponse)?.statusCode == 200 { return baseURL }
             } catch {
-                lastError = error
+                continue
             }
         }
-        throw lastError
+        return nil
+    }
+
+    private func endpoint(_ path: String, on baseURL: URL) -> URL {
+        baseURL.appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
     }
 }
 
