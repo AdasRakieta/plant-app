@@ -80,7 +80,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(200, result)
             symptom = str(body.get("symptom", ""))[:200]
             species = str(body.get("speciesName", "nieustalony"))[:120]
-            prompt = ("Jesteś ostrożnym asystentem pielęgnacji roślin. Objaw: " + symptom + ". Gatunek: " + species + ". "
+            requirements = str(body.get("requirements", "brak dodatkowych danych"))[:1200]
+            prompt = ("Jesteś ostrożnym asystentem pielęgnacji roślin. Objaw: " + symptom + ". Gatunek: " + species + ". Własne wymagania użytkownika: " + requirements + ". "
                       "Na podstawie zdjęcia, jeśli jest, podaj tylko bezpieczne, odwracalne kontrole; nie dawkuj chemii i nie nakazuj podlewania. "
                       "Zwróć WYŁĄCZNIE JSON: {hypotheses:[{title,likelihood,evidence,safeChecks}],missingInformation:[string],uncertainty:string}. "
                       "likelihood: niska, średnia lub wyższa. Maksymalnie 3 hipotezy.")

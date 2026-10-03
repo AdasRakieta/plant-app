@@ -8,6 +8,7 @@ struct CareDetailView: View {
     @State private var selection: CareEvent.Kind?
     @State private var dryRecorded = false
     @State private var saveError: String?
+    @State private var confirmation: String?
 
     var body: some View {
         ScrollView {
@@ -30,6 +31,12 @@ struct CareDetailView: View {
                     Image(PlantSpecies.match(plant.speciesName)?.imageName ?? "PlantHero").resizable().scaledToFill().frame(height: 170).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
                     Text("Jak to sprawdzić?").font(.title3.bold()).foregroundStyle(Palette.terracotta)
                     Text("Sprawdź podłoże także pod powierzchnią. Oceń, czy jest nadal wilgotne, czy już suche. \(PlantSpecies.match(plant.speciesName)?.watering ?? "Nie podlewaj tylko według kalendarza.")")
+                    if let requirements = plant.customRequirements, !requirements.isEmpty {
+                        Divider()
+                        Label("Własne wymagania", systemImage: "list.bullet.clipboard")
+                            .font(.headline)
+                        Text(requirements).font(.subheadline)
+                    }
                     if plant.speciesName.isEmpty {
                         Text("Gatunek tej rośliny nie został jeszcze określony.")
                             .font(.footnote)
@@ -50,7 +57,7 @@ struct CareDetailView: View {
                         .font(.subheadline)
                     Button("Podlano") { recordWatering() }
                         .buttonStyle(PrimaryButtonStyle())
-                    Button("Nie podlewam teraz") { dismiss() }
+                    Button("Nie podlewam teraz") { confirmation = "Zapisano: podłoże suche. Kontrola wróci jutro, a podlewanie nie zostało zapisane." }
                         .frame(maxWidth: .infinity)
                 } else {
                     Button("Zapisz obserwację") { saveObservation() }
@@ -78,6 +85,14 @@ struct CareDetailView: View {
             Button("OK", role: .cancel) { saveError = nil }
         } message: {
             Text(saveError ?? "")
+        }
+        .alert("Zapisano", isPresented: Binding(
+            get: { confirmation != nil },
+            set: { if !$0 { confirmation = nil } }
+        )) {
+            Button("Gotowe") { dismiss() }
+        } message: {
+            Text(confirmation ?? "")
         }
     }
 
@@ -118,7 +133,16 @@ struct CareDetailView: View {
         }
         do {
             try context.save()
-            if selection == .dry { dryRecorded = true } else { dismiss() }
+            switch selection {
+            case .dry:
+                dryRecorded = true
+            case .moist:
+                confirmation = "Zapisano: podłoże nadal wilgotne. Następna kontrola została zaplanowana."
+            case .uncertain:
+                confirmation = "Zapisano: ocena jest niepewna. Przypomnę o kontroli jutro."
+            case .watered:
+                break
+            }
         } catch {
             context.rollback()
             saveError = "Nie udało się zapisać obserwacji. Spróbuj ponownie."
@@ -132,7 +156,7 @@ struct CareDetailView: View {
         plant.nextCheckDate = CarePlanner.nextCheck(after: now, intervalDays: plant.checkIntervalDays)
         do {
             try context.save()
-            dismiss()
+            confirmation = "Zapisano podlewanie i wyznaczono następną kontrolę."
         } catch {
             context.rollback()
             saveError = "Nie udało się zapisać podlewania. Spróbuj ponownie."

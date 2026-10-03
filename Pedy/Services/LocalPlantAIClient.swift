@@ -58,8 +58,8 @@ actor LocalPlantAIClient {
         return try await request(path: "/v1/identify", body: body)
     }
 
-    func diagnose(image: UIImage?, symptom: String, speciesName: String = "") async throws -> PlantDiagnosis {
-        var body: [String: Any] = ["symptom": symptom, "speciesName": speciesName]
+    func diagnose(image: UIImage?, symptom: String, speciesName: String = "", requirements: String = "") async throws -> PlantDiagnosis {
+        var body: [String: Any] = ["symptom": symptom, "speciesName": speciesName, "requirements": requirements]
         if let image { body["image"] = try encodedImage(image) }
         return try await request(path: "/v1/diagnose", body: body)
     }

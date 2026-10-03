@@ -4,12 +4,13 @@ struct AtlasView: View {
     @State private var query = ""
     @State private var petSafeOnly = false
     @State private var difficulty = "Wszystkie"
+    @State private var light = "Wszystkie"
     @State private var selected: PlantSpecies?
 
     private var species: [PlantSpecies] {
         PlantSpecies.catalog.filter { item in
             let text = "\(item.commonName) \(item.latinName) \(item.light)".folding(options: .diacriticInsensitive, locale: .current)
-            return (query.isEmpty || text.localizedCaseInsensitiveContains(query)) && (!petSafeOnly || item.petSafety == "Bezpieczna dla zwierząt") && (difficulty == "Wszystkie" || item.difficulty == difficulty)
+            return (query.isEmpty || text.localizedCaseInsensitiveContains(query)) && (!petSafeOnly || item.petSafety == "Bezpieczna dla zwierząt") && (difficulty == "Wszystkie" || item.difficulty == difficulty) && (light == "Wszystkie" || item.light == light)
         }
     }
 
@@ -19,17 +20,12 @@ struct AtlasView: View {
                 Text("Atlas roślin").font(.largeTitle.bold()).foregroundStyle(Palette.forest)
                 Text("Wybierz gatunek, poznaj jego potrzeby i dodaj go do swojej kolekcji.")
                     .foregroundStyle(.secondary)
-                Toggle("Tylko bezpieczne dla zwierząt", isOn: $petSafeOnly)
-                    .tint(Palette.terracotta)
-                    .padding(14)
-                    .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16))
-                Picker("Trudność", selection: $difficulty) {
-                    Text("Wszystkie").tag("Wszystkie")
-                    Text("Łatwa").tag("Łatwa")
-                    Text("Umiarkowana").tag("Umiarkowana")
-                    Text("Wymagająca").tag("Wymagająca")
+                HStack(spacing: 10) {
+                    Menu { Picker("Trudność", selection: $difficulty) { ForEach(["Wszystkie", "Łatwa", "Umiarkowana", "Wymagająca"], id: \.self) { Text($0).tag($0) } } } label: { filterLabel("Trudność", value: difficulty) }
+                    Menu { Picker("Światło", selection: $light) { ForEach(["Wszystkie"] + Array(Set(PlantSpecies.catalog.map(\.light))).sorted(), id: \.self) { Text($0).tag($0) } } } label: { filterLabel("Światło", value: light) }
                 }
-                .pickerStyle(.segmented)
+                Toggle("Bezpieczne dla zwierząt", isOn: $petSafeOnly)
+                    .tint(Palette.terracotta).font(.subheadline)
                 LazyVStack(spacing: 12) {
                     ForEach(species) { item in
                         Button { selected = item } label: {
@@ -53,6 +49,14 @@ struct AtlasView: View {
         .background(Palette.background.ignoresSafeArea())
         .searchable(text: $query, prompt: "Szukaj gatunku")
         .sheet(item: $selected) { SpeciesDetailView(species: $0) }
+    }
+
+    private func filterLabel(_ title: String, value: String) -> some View {
+        Label(value == "Wszystkie" ? title : value, systemImage: "line.3.horizontal.decrease.circle")
+            .font(.subheadline.weight(.medium)).foregroundStyle(Palette.forest)
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(Palette.surface, in: Capsule())
     }
 }
 

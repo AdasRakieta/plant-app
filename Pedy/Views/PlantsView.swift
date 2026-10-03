@@ -60,6 +60,8 @@ struct AddPlantView: View {
     @State private var candidates: [AIPlantCandidate] = []
     @State private var isRecognising = false
     @State private var recognitionError: String?
+    @State private var customSpeciesName = ""
+    @State private var customRequirements = ""
 
     private var validName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -107,6 +109,16 @@ struct AddPlantView: View {
                             Text(item.commonName).tag(item.commonName)
                         }
                     }
+                    TextField("Gatunek lub odmiana spoza atlasu", text: $customSpeciesName)
+                    if !customSpeciesName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Własne wymagania").font(.subheadline.weight(.semibold))
+                            TextEditor(text: $customRequirements)
+                                .frame(minHeight: 90)
+                            Text("Np. światło, podłoże, podlewanie, nawożenie i wielkość doniczki. Te dane zostają przy roślinie oraz są przekazywane do lokalnej diagnozy.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                        }
+                    }
                     TextField("Pomieszczenie", text: $room)
                 }
                 Section("Kontrola podłoża") {
@@ -124,12 +136,14 @@ struct AddPlantView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Zapisz") {
+                        let requestedSpecies = customSpeciesName.trimmingCharacters(in: .whitespacesAndNewlines)
                         let plant = Plant(
                             name: validName,
-                            speciesName: speciesName.trimmingCharacters(in: .whitespacesAndNewlines),
+                            speciesName: requestedSpecies.isEmpty ? speciesName.trimmingCharacters(in: .whitespacesAndNewlines) : requestedSpecies,
                             room: room.trimmingCharacters(in: .whitespacesAndNewlines),
                             nextCheckDate: nextCheckDate,
-                            checkIntervalDays: checkIntervalDays
+                            checkIntervalDays: checkIntervalDays,
+                            customRequirements: customRequirements.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : customRequirements.trimmingCharacters(in: .whitespacesAndNewlines)
                         )
                         context.insert(plant)
                         do {
@@ -196,6 +210,10 @@ struct PlantDetailView: View {
                     LabeledContent("Ostatnie podlewanie", value: date.formatted(date: .abbreviated, time: .omitted))
                 }
                 NavigationLink("Sprawdź podłoże") { CareDetailView(plant: plant) }
+                NavigationLink("Zdiagnozuj tę roślinę") { DiagnosisView(speciesName: plant.speciesName, requirements: plant.customRequirements ?? "") }
+                if let requirements = plant.customRequirements, !requirements.isEmpty {
+                    LabeledContent("Własne wymagania") { Text(requirements).multilineTextAlignment(.trailing) }
+                }
             }
             Section("Historia") {
                 if events.isEmpty {

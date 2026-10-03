@@ -3,6 +3,8 @@ import PhotosUI
 import UIKit
 
 struct DiagnosisView: View {
+    let speciesName: String
+    let requirements: String
     @State private var photo: PhotosPickerItem?
     @State private var image: UIImage?
     @State private var symptom = ""
@@ -11,12 +13,18 @@ struct DiagnosisView: View {
     @State private var errorMessage: String?
     private let symptoms = ["Żółte liście", "Brązowe końcówki", "Opadające liście", "Plamy na liściach", "Szkodniki"]
 
+    init(speciesName: String = "", requirements: String = "") {
+        self.speciesName = speciesName
+        self.requirements = requirements
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text("Diagnoza").font(.largeTitle.bold()).foregroundStyle(Palette.forest)
                 Text("Lokalne AI analizuje zdjęcie tylko na Twojej Malinie. Wynik jest hipotezą — zawsze sprawdź roślinę przed działaniem.")
                     .foregroundStyle(.secondary)
+                if !speciesName.isEmpty { Label("Analizujesz: \(speciesName)", systemImage: "leaf").font(.subheadline).foregroundStyle(Palette.forest) }
                 PhotosPicker(selection: $photo, matching: .images) {
                     HStack {
                         if let image { Image(uiImage: image).resizable().scaledToFill().frame(width: 72, height: 72).clipShape(RoundedRectangle(cornerRadius: 14)) }
@@ -54,7 +62,7 @@ struct DiagnosisView: View {
     private func diagnose() async {
         await MainActor.run { isAnalysing = true; errorMessage = nil; result = nil }
         do {
-            let diagnosis = try await LocalPlantAIClient.shared.diagnose(image: image, symptom: symptom)
+            let diagnosis = try await LocalPlantAIClient.shared.diagnose(image: image, symptom: symptom, speciesName: speciesName, requirements: requirements)
             await MainActor.run { result = diagnosis }
         } catch {
             await MainActor.run { errorMessage = error.localizedDescription }

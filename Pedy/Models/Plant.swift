@@ -11,6 +11,9 @@ final class Plant {
     var checkIntervalDays: Int
     var lastWateredAt: Date?
     var createdAt: Date
+    /// Optional free-text requirements for a species not yet present in the offline atlas.
+    /// Optional fields keep existing SwiftData records readable after an app update.
+    var customRequirements: String?
 
     init(
         id: UUID = UUID(),
@@ -20,7 +23,8 @@ final class Plant {
         nextCheckDate: Date = .now,
         checkIntervalDays: Int = 3,
         lastWateredAt: Date? = nil,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        customRequirements: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -30,6 +34,7 @@ final class Plant {
         self.checkIntervalDays = checkIntervalDays
         self.lastWateredAt = lastWateredAt
         self.createdAt = createdAt
+        self.customRequirements = customRequirements
     }
 }
 
