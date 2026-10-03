@@ -19,7 +19,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.pedy.app
         GENERATE_INFOPLIST_FILE: YES
-        MARKETING_VERSION: 0.1.5
+        MARKETING_VERSION: 0.1.6
         CURRENT_PROJECT_VERSION: 1
         INFOPLIST_KEY_CFBundleDisplayName: Pedy
         INFOPLIST_KEY_CFBundleName: Pedy

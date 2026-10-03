@@ -65,9 +65,11 @@ struct AddPlantView: View {
 
     private var validName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-    init(species: PlantSpecies? = nil) {
+    init(species: PlantSpecies? = nil, customSpeciesName: String = "", customRequirements: String = "") {
         _speciesName = State(initialValue: species?.commonName ?? "")
         _checkIntervalDays = State(initialValue: species?.intervalDays ?? 3)
+        _customSpeciesName = State(initialValue: customSpeciesName)
+        _customRequirements = State(initialValue: customRequirements)
     }
 
     var body: some View {

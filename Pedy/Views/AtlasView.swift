@@ -1,11 +1,23 @@
 import SwiftUI
+import SwiftData
 
 struct AtlasView: View {
+    @Query(sort: \Plant.name) private var plants: [Plant]
     @State private var query = ""
     @State private var petSafeOnly = false
     @State private var difficulty = "Wszystkie"
     @State private var light = "Wszystkie"
     @State private var selected: PlantSpecies?
+    @State private var selectedCustom: Plant?
+
+    private var customPlants: [Plant] {
+        var known = Set<String>()
+        return plants.filter { plant in
+            let name = plant.speciesName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, PlantSpecies.match(name) == nil else { return false }
+            return known.insert(name.folding(options: .diacriticInsensitive, locale: .current).lowercased()).inserted
+        }
+    }
 
     private var species: [PlantSpecies] {
         PlantSpecies.catalog.filter { item in
@@ -26,6 +38,24 @@ struct AtlasView: View {
                 }
                 Toggle("Bezpieczne dla zwierząt", isOn: $petSafeOnly)
                     .tint(Palette.terracotta).font(.subheadline)
+                if !customPlants.isEmpty {
+                    Text("Twoje gatunki").font(.title3.bold()).foregroundStyle(Palette.forest)
+                    Text("Własne wymagania są zapisane przy roślinie i nie są zastępowane domysłami atlasu.").font(.footnote).foregroundStyle(.secondary)
+                    ForEach(customPlants) { plant in
+                        Button { selectedCustom = plant } label: {
+                            HStack(spacing: 14) {
+                                PlantThumbnail()
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(plant.speciesName).font(.headline)
+                                    Text(plant.customRequirements?.isEmpty == false ? "Własne wymagania zapisane" : "Wymagania do uzupełnienia")
+                                        .font(.caption).foregroundStyle(Palette.terracotta)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                            }.padding(12).background(Palette.surface, in: RoundedRectangle(cornerRadius: 18))
+                        }.buttonStyle(.plain)
+                    }
+                }
                 LazyVStack(spacing: 12) {
                     ForEach(species) { item in
                         Button { selected = item } label: {
@@ -49,6 +79,7 @@ struct AtlasView: View {
         .background(Palette.background.ignoresSafeArea())
         .searchable(text: $query, prompt: "Szukaj gatunku")
         .sheet(item: $selected) { SpeciesDetailView(species: $0) }
+        .sheet(item: $selectedCustom) { CustomSpeciesDetailView(plant: $0) }
     }
 
     private func filterLabel(_ title: String, value: String) -> some View {
@@ -57,6 +88,32 @@ struct AtlasView: View {
             .padding(.horizontal, 12).padding(.vertical, 10)
             .frame(maxWidth: .infinity)
             .background(Palette.surface, in: Capsule())
+    }
+}
+
+private struct CustomSpeciesDetailView: View {
+    let plant: Plant
+    @Environment(\.dismiss) private var dismiss
+    @State private var adding = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    PlantThumbnail().frame(maxWidth: .infinity, alignment: .leading)
+                    Text(plant.speciesName).font(.largeTitle.bold()).foregroundStyle(Palette.forest)
+                    Text("Gatunek dodany przez Ciebie").foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Wymagania", systemImage: "list.bullet.clipboard") .font(.headline)
+                        Text(plant.customRequirements?.isEmpty == false ? plant.customRequirements! : "Brak zapisanych wymagań. Uzupełnij je w szczegółach rośliny, zanim oprzesz na nich pielęgnację.")
+                    }.padding(18).background(Palette.surface, in: RoundedRectangle(cornerRadius: 18))
+                    Button("Dodaj kolejny egzemplarz") { adding = true }.buttonStyle(PrimaryButtonStyle())
+                }.padding(20)
+            }.background(Palette.background.ignoresSafeArea())
+            .navigationTitle("Twój gatunek").navigationBarTitleDisplayMode(.inline)
+            .toolbar { Button("Gotowe") { dismiss() } }
+            .sheet(isPresented: $adding) { AddPlantView(customSpeciesName: plant.speciesName, customRequirements: plant.customRequirements ?? "") }
+        }
     }
 }
 
