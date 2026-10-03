@@ -3,12 +3,13 @@ import SwiftUI
 struct AtlasView: View {
     @State private var query = ""
     @State private var petSafeOnly = false
+    @State private var difficulty = "Wszystkie"
     @State private var selected: PlantSpecies?
 
     private var species: [PlantSpecies] {
         PlantSpecies.catalog.filter { item in
             let text = "\(item.commonName) \(item.latinName) \(item.light)".folding(options: .diacriticInsensitive, locale: .current)
-            return (query.isEmpty || text.localizedCaseInsensitiveContains(query)) && (!petSafeOnly || item.petSafety == "Bezpieczna dla zwierząt")
+            return (query.isEmpty || text.localizedCaseInsensitiveContains(query)) && (!petSafeOnly || item.petSafety == "Bezpieczna dla zwierząt") && (difficulty == "Wszystkie" || item.difficulty == difficulty)
         }
     }
 
@@ -22,15 +23,22 @@ struct AtlasView: View {
                     .tint(Palette.terracotta)
                     .padding(14)
                     .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16))
+                Picker("Trudność", selection: $difficulty) {
+                    Text("Wszystkie").tag("Wszystkie")
+                    Text("Łatwa").tag("Łatwa")
+                    Text("Umiarkowana").tag("Umiarkowana")
+                    Text("Wymagająca").tag("Wymagająca")
+                }
+                .pickerStyle(.segmented)
                 LazyVStack(spacing: 12) {
                     ForEach(species) { item in
                         Button { selected = item } label: {
                             HStack(spacing: 14) {
-                                PlantThumbnail()
+                                PlantThumbnail(species: item)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.commonName).font(.headline)
                                     Text(item.latinName).font(.subheadline).italic().foregroundStyle(.secondary)
-                                    Text(item.light).font(.caption).foregroundStyle(Palette.terracotta)
+                                    HStack { Text(item.light); Spacer(); Text(item.difficulty) }.font(.caption).foregroundStyle(Palette.terracotta)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right").foregroundStyle(.tertiary)
@@ -56,13 +64,17 @@ struct SpeciesDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Image("PlantHero").resizable().scaledToFill().frame(height: 220).clipped().clipShape(RoundedRectangle(cornerRadius: 24))
+                    Image(species.imageName).resizable().scaledToFill().frame(height: 220).clipped().clipShape(RoundedRectangle(cornerRadius: 24))
                     Text(species.commonName).font(.largeTitle.bold())
                     Text(species.latinName).italic().foregroundStyle(.secondary)
                     Text(species.summary).font(.body)
                     Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 16) {
                         GridRow { Text("Światło").foregroundStyle(.secondary); Text(species.light) }
                         GridRow { Text("Podlewanie").foregroundStyle(.secondary); Text(species.watering) }
+                        GridRow { Text("Trudność").foregroundStyle(.secondary); Text(species.difficulty) }
+                        GridRow { Text("Nawożenie").foregroundStyle(.secondary); Text(species.fertilizer) }
+                        GridRow { Text("Podłoże").foregroundStyle(.secondary); Text(species.soil) }
+                        GridRow { Text("Doniczka").foregroundStyle(.secondary); Text(species.pot) }
                         GridRow { Text("Zwierzęta").foregroundStyle(.secondary); Text(species.petSafety) }
                     }.padding(18).background(Palette.surface, in: RoundedRectangle(cornerRadius: 18))
                     Button("Dodaj do moich roślin") { adding = true }.buttonStyle(PrimaryButtonStyle())
@@ -76,7 +88,8 @@ struct SpeciesDetailView: View {
 }
 
 struct PlantThumbnail: View {
+    var species: PlantSpecies? = nil
     var body: some View {
-        Image("PlantHero").resizable().scaledToFill().frame(width: 64, height: 64).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
+        Image(species?.imageName ?? "PlantHero").resizable().scaledToFill().frame(width: 64, height: 64).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

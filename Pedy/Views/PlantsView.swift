@@ -19,7 +19,7 @@ struct PlantsView: View {
                         PlantDetailView(plant: plant)
                     } label: {
                         HStack(spacing: 12) {
-                            PlantThumbnail()
+                            PlantThumbnail(species: PlantSpecies.match(plant.speciesName))
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(plant.name).font(.headline)
                                 Text([plant.speciesName, plant.room].filter { !$0.isEmpty }.joined(separator: " · "))

@@ -10,6 +10,40 @@ struct PlantSpecies: Identifiable, Hashable {
     let summary: String
     let petSafety: String
 
+    var imageName: String { "Plant-\(id)" }
+
+    var difficulty: String {
+        switch id {
+        case "sansewieria", "zamiokulkas", "zielistka", "epipremnum", "fikus-sprężysty", "dracena", "aloes", "grubosz", "hoja": "Łatwa"
+        case "calathea", "maranta", "paprotka", "anturium": "Wymagająca"
+        default: "Umiarkowana"
+        }
+    }
+
+    var fertilizer: String {
+        switch id {
+        case "aloes", "grubosz", "sansewieria", "zamiokulkas": "Od kwietnia do sierpnia co 4–6 tygodni, połową dawki nawozu do sukulentów."
+        case "calathea", "maranta", "paprotka", "skrzydłokwiat": "Od marca do września co 4 tygodnie, połową dawki nawozu do roślin zielonych."
+        default: "Od marca do września co 2–4 tygodnie, nawozem do roślin zielonych według etykiety."
+        }
+    }
+
+    var soil: String {
+        switch id {
+        case "aloes", "grubosz", "sansewieria", "zamiokulkas": "Przepuszczalne podłoże do kaktusów i sukulentów z perlitem lub pumeksem."
+        case "calathea", "maranta", "paprotka", "skrzydłokwiat": "Lekka mieszanka do roślin zielonych z włóknem kokosowym i perlitem, stale lekko wilgotna."
+        case "anturium", "monstera", "epipremnum", "hoja": "Przewiewna mieszanka aroidowa: ziemia, kora, perlit i włókno kokosowe."
+        default: "Dobrej jakości, przepuszczalne podłoże do roślin zielonych z dodatkiem perlitu."
+        }
+    }
+
+    var pot: String {
+        switch id {
+        case "calathea", "maranta", "paprotka", "skrzydłokwiat": "Doniczka z odpływem; osłonka nie może zatrzymywać wody przy korzeniach."
+        default: "Doniczka z otworem odpływowym, tylko 2–3 cm szersza od bryły korzeniowej."
+        }
+    }
+
     static let catalog: [PlantSpecies] = [
         .init(id: "monstera", commonName: "Monstera", latinName: "Monstera deliciosa", light: "Jasne, rozproszone", watering: "Gdy przeschną 3–5 cm podłoża", intervalDays: 7, summary: "Duże, perforowane liście. Lubi stabilne, jasne stanowisko.", petSafety: "Toksyczna dla zwierząt"),
         .init(id: "fikus-sprężysty", commonName: "Fikus sprężysty", latinName: "Ficus elastica", light: "Jasne, rozproszone", watering: "Gdy przeschnie wierzch podłoża", intervalDays: 8, summary: "Wytrzymały fikus o błyszczących liściach.", petSafety: "Toksyczny dla zwierząt"),
