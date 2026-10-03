@@ -27,12 +27,12 @@ def ollama(prompt, image=None):
     message = {"role": "user", "content": prompt}
     if image:
         message["images"] = [image]
-    payload = json.dumps({"model": MODEL, "stream": False, "format": "json", "options": {"temperature": 0.1, "num_predict": 96}, "messages": [message]}).encode()
+    payload = json.dumps({"model": MODEL, "stream": False, "options": {"temperature": 0.1, "num_predict": 48}, "messages": [message]}).encode()
     req = urllib.request.Request(OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=18) as response:
             raw = json.load(response)["message"]["content"]
-        return json.loads(raw)
+        return raw.strip()
     except urllib.error.HTTPError as exc:
         raise RuntimeError("Model AI nie jest jeszcze gotowy na serwerze.") from exc
     except (urllib.error.URLError, KeyError, ValueError) as exc:
@@ -49,6 +49,13 @@ def safe_fallback(symptom):
         "missingInformation": ["Warunki światła", "ostatnie podlewanie", "zbliżenie objawu"],
         "uncertainty": "To bezpieczny wynik zastępczy. Lokalny model nie zdążył z analizą zdjęcia, więc nie proponujemy zabiegu."
     }
+
+def catalog_match(answer):
+    text = answer.casefold()
+    for species_id, common, latin in CATALOG:
+        if species_id.casefold() in text or common.casefold() in text or latin.casefold() in text:
+            return {"speciesID": species_id, "commonName": common, "latinName": latin, "confidence": 0.55, "reason": answer[:280]}
+    return None
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -81,35 +88,36 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(image, str) or len(image) < 100:
                     raise ValueError("Dodaj zdjęcie rośliny do rozpoznania.")
                 catalog = "; ".join(f"{i}:{n}" for i, n, _ in CATALOG)
-                prompt = ("Rozpoznaj roślinę. Katalog: " + catalog + ". "
-                          "Tylko JSON {candidates:[{speciesID,commonName,latinName,confidence,reason}],uncertainty,needsAnotherPhoto}. "
-                          "Maksymalnie 2 kandydaty. Nie zgaduj.")
+                prompt = ("Jaka roślina jest na zdjęciu? Wybierz jedną z: " + catalog + ". "
+                          "Odpowiedz wyłącznie nazwą z listy albo UNKNOWN. Nie wyjaśniaj.")
                 try:
-                    result = ollama(prompt, image)
+                    answer = ollama(prompt, image)
                 except RuntimeError:
                     return self.send_json(200, {
                         "candidates": [],
                         "uncertainty": "Lokalny model nie zdążył rozpoznać zdjęcia. Spróbuj ponownie z wyraźnym ujęciem całej rośliny i liścia.",
                         "needsAnotherPhoto": True
                     })
-                result.setdefault("candidates", [])
-                result.setdefault("uncertainty", "Wynik wymaga potwierdzenia użytkownika.")
-                result.setdefault("needsAnotherPhoto", not bool(result["candidates"]))
-                return self.send_json(200, result)
+                candidate = catalog_match(answer)
+                return self.send_json(200, {
+                    "candidates": [candidate] if candidate else [],
+                    "uncertainty": "Wynik lokalnego modelu wymaga potwierdzenia użytkownika.",
+                    "needsAnotherPhoto": candidate is None
+                })
             symptom = str(body.get("symptom", ""))[:200]
             species = str(body.get("speciesName", "nieustalony"))[:120]
             requirements = str(body.get("requirements", "brak dodatkowych danych"))[:1200]
-            prompt = ("Objaw: " + symptom + ". Gatunek: " + species + ". Wymagania: " + requirements + ". "
-                      "Tylko bezpieczne kontrole, bez nakazu podlewania lub chemii. "
-                      "Tylko JSON {hypotheses:[{title,likelihood,evidence,safeChecks}],missingInformation:[string],uncertainty:string}. Maksymalnie 2 hipotezy.")
+            prompt = ("Roślina: " + species + ". Objaw: " + symptom + ". Wymagania: " + requirements + ". "
+                      "W jednej krótkiej frazie opisz możliwą obserwację. Bez chemii i bez nakazu podlewania.")
             try:
-                result = ollama(prompt, image)
+                answer = ollama(prompt, image)
             except RuntimeError:
                 return self.send_json(200, safe_fallback(symptom))
-            result.setdefault("hypotheses", [])
-            result.setdefault("missingInformation", ["Sprawdź wilgotność podłoża i spody liści."])
-            result.setdefault("uncertainty", "To wskazówki pomocnicze, nie pewna diagnoza.")
-            return self.send_json(200, result)
+            return self.send_json(200, {
+                "hypotheses": [{"title": "Ocena lokalnego modelu", "likelihood": "nieustalona", "evidence": answer[:600], "safeChecks": ["Sprawdź wilgotność podłoża pod powierzchnią.", "Obejrzyj spody liści i odpływ doniczki."]}],
+                "missingInformation": ["Ostatnie podlewanie", "warunki światła", "zbliżenie objawu"],
+                "uncertainty": "To wskazówka z lokalnego modelu, nie pewna diagnoza ani zalecenie zabiegu."
+            })
         except (ValueError, RuntimeError) as exc:
             self.send_json(400 if isinstance(exc, ValueError) else 503, {"error": str(exc)})
         except Exception:
