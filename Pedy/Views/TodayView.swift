@@ -8,7 +8,7 @@ struct TodayView: View {
 
     private var sessions: [CareSession] {
         _ = planRevision
-        CarePlanner.sessions(for: CarePlanner.tasks(for: plants))
+        return CarePlanner.sessions(for: CarePlanner.tasks(for: plants))
     }
 
     var body: some View {
