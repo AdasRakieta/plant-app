@@ -4,7 +4,7 @@ Stan: 2 października 2026. Repo zawiera konfigurację do uruchomienia na Raspbe
 
 ## Ustalone działanie
 
-1. GitHub Actions buduje **niepodpisane** `Pedy-unsigned.ipa` dla iPhone'a. Pi co 6 godzin sprawdza artefakty z `main`, wybiera najnowszy przebieg zakończony sukcesem, weryfikuje strukturę IPA i zapisuje go pod stałą nazwą `/srv/pedy/Pedy.ipa`. Lokalna kopia pozostaje dostępna także po wygaśnięciu artefaktu GitHub lub chwilowym błędzie pobrania.
+1. GitHub Actions buduje **niepodpisane** `Pedy-unsigned.ipa` dla iPhone'a. Pi co 5 minut sprawdza artefakty z `main`, wybiera najnowszy przebieg zakończony sukcesem, weryfikuje strukturę IPA i zapisuje go pod stałą nazwą `/srv/pedy/Pedy.ipa`. Lokalna kopia pozostaje dostępna także po wygaśnięciu artefaktu GitHub lub chwilowym błędzie pobrania.
 2. Pi udostępnia stronę w sieci domowej pod `http://192.168.1.218:8787/app/` oraz prywatnie w Tailscale pod `https://malina.tail384b18.ts.net/app/`. Pod oboma adresami jest `Pedy.ipa`, ikona i źródło SideStore. Tailscale Serve wymaga włączenia HTTPS w tailnecie i dostępu tego urządzenia zgodnie z regułami tailnetu. Nie używamy publicznego Funnel.
 3. SideStore na iPhonie podpisuje i instaluje pobrane IPA. To samo IPA można pobrać wielokrotnie; Pi nie przechowuje konta Apple, certyfikatu SideStore ani pliku parowania.
 4. SideStore okresowo odnawia podpis własny i aplikacji w tle, pod warunkiem że iOS da mu czas oraz spełnione są warunki sieciowe. Pi nie może wymusić tego odnowienia.

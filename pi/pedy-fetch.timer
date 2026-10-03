@@ -3,7 +3,7 @@ Description=Check for a new Pedy IPA periodically
 
 [Timer]
 OnBootSec=10m
-OnUnitActiveSec=6h
+OnUnitActiveSec=5min
 Persistent=true
 
 [Install]
