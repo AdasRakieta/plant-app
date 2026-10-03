@@ -113,6 +113,8 @@ class Handler(BaseHTTPRequestHandler):
                 answer = ollama(prompt, image)
             except RuntimeError:
                 return self.send_json(200, safe_fallback(symptom))
+            if len(answer) < 12:
+                return self.send_json(200, safe_fallback(symptom))
             return self.send_json(200, {
                 "hypotheses": [{"title": "Ocena lokalnego modelu", "likelihood": "nieustalona", "evidence": answer[:600], "safeChecks": ["Sprawdź wilgotność podłoża pod powierzchnią.", "Obejrzyj spody liści i odpływ doniczki."]}],
                 "missingInformation": ["Ostatnie podlewanie", "warunki światła", "zbliżenie objawu"],
