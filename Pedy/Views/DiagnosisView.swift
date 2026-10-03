@@ -46,7 +46,7 @@ struct DiagnosisView: View {
     }
 
     @MainActor private func loadImage(_ item: PhotosPickerItem?) async {
-        guard let data = try? await item?.loadTransferable(type: Data.self), let data, let loaded = UIImage(data: data) else { return }
+        guard let data = try? await item?.loadTransferable(type: Data.self), let loaded = UIImage(data: data) else { return }
         image = loaded
         result = nil
     }

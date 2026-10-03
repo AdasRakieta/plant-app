@@ -157,7 +157,7 @@ struct AddPlantView: View {
     }
 
     @MainActor private func loadPhoto(_ item: PhotosPickerItem?) async {
-        guard let data = try? await item?.loadTransferable(type: Data.self), let data, let image = UIImage(data: data) else { return }
+        guard let data = try? await item?.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return }
         photoImage = image
         candidates = []
         recognitionError = nil
