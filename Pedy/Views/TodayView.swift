@@ -4,8 +4,10 @@ import SwiftData
 struct TodayView: View {
     @Query(sort: \Plant.name) private var plants: [Plant]
     @State private var showingAdd = false
+    @State private var planRevision = 0
 
     private var sessions: [CareSession] {
+        _ = planRevision
         CarePlanner.sessions(for: CarePlanner.tasks(for: plants))
     }
 
@@ -30,7 +32,7 @@ struct TodayView: View {
                         .buttonStyle(PrimaryButtonStyle())
                 } else if let first = sessions.first {
                     NavigationLink {
-                        SessionView(session: first, plants: plants)
+                        SessionView(session: first, plants: plants) { planRevision += 1 }
                     } label: {
                         ZStack(alignment: .leading) {
                             Image("PlantHero").resizable().scaledToFill().frame(height: 250).clipped()
@@ -52,7 +54,7 @@ struct TodayView: View {
                     ForEach(first.tasks) { task in
                         if let plant = plants.first(where: { $0.id == task.plantID }) {
                             NavigationLink {
-                                CareDetailView(plant: plant)
+                                CareDetailView(plant: plant) { planRevision += 1 }
                             } label: {
                                 HStack {
                                     PlantThumbnail(species: PlantSpecies.match(plant.speciesName))
@@ -87,6 +89,7 @@ struct TodayView: View {
 struct SessionView: View {
     let session: CareSession
     let plants: [Plant]
+    let didSave: (() -> Void)?
 
     var body: some View {
         List {
@@ -100,7 +103,7 @@ struct SessionView: View {
                 ForEach(session.tasks) { task in
                     if let plant = plants.first(where: { $0.id == task.plantID }) {
                         NavigationLink {
-                            CareDetailView(plant: plant)
+                            CareDetailView(plant: plant, didSave: didSave)
                         } label: {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(plant.name).font(.headline)

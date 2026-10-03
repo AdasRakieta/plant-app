@@ -3,12 +3,18 @@ import SwiftData
 
 struct CareDetailView: View {
     let plant: Plant
+    let didSave: (() -> Void)?
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @State private var selection: CareEvent.Kind?
     @State private var dryRecorded = false
     @State private var saveError: String?
     @State private var confirmation: String?
+
+    init(plant: Plant, didSave: (() -> Void)? = nil) {
+        self.plant = plant
+        self.didSave = didSave
+    }
 
     var body: some View {
         ScrollView {
@@ -133,6 +139,7 @@ struct CareDetailView: View {
         }
         do {
             try context.save()
+            didSave?()
             switch selection {
             case .dry:
                 dryRecorded = true
@@ -156,6 +163,7 @@ struct CareDetailView: View {
         plant.nextCheckDate = CarePlanner.nextCheck(after: now, intervalDays: plant.checkIntervalDays)
         do {
             try context.save()
+            didSave?()
             confirmation = "Zapisano podlewanie i wyznaczono następną kontrolę."
         } catch {
             context.rollback()

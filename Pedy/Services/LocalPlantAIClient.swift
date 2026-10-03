@@ -50,7 +50,7 @@ actor LocalPlantAIClient {
     // Serwer jest dostępny wyłącznie w prywatnej sieci LAN/Tailscale, bez płatnego API.
     private let baseURLs = [
         URL(string: "http://192.168.1.218:8788")!,
-        URL(string: "http://malina.tail384b18.ts.net:8788")!
+        URL(string: "https://malina.tail384b18.ts.net/ai")!
     ]
 
     func identify(image: UIImage) async throws -> PlantIdentification {

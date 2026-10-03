@@ -27,16 +27,28 @@ def ollama(prompt, image=None):
     message = {"role": "user", "content": prompt}
     if image:
         message["images"] = [image]
-    payload = json.dumps({"model": MODEL, "stream": False, "format": "json", "messages": [message]}).encode()
+    payload = json.dumps({"model": MODEL, "stream": False, "format": "json", "options": {"temperature": 0.1, "num_predict": 220}, "messages": [message]}).encode()
     req = urllib.request.Request(OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=70) as response:
+        with urllib.request.urlopen(req, timeout=55) as response:
             raw = json.load(response)["message"]["content"]
         return json.loads(raw)
     except urllib.error.HTTPError as exc:
         raise RuntimeError("Model AI nie jest jeszcze gotowy na serwerze.") from exc
     except (urllib.error.URLError, KeyError, ValueError) as exc:
         raise RuntimeError("Lokalny model AI nie odpowiedział. Spróbuj ponownie za chwilę.") from exc
+
+def safe_fallback(symptom):
+    return {
+        "hypotheses": [{
+            "title": "Potrzebna bezpieczna kontrola ręczna",
+            "likelihood": "nieustalona",
+            "evidence": "Model lokalny nie zwrócił wyniku na czas; nie zgadujemy przyczyny na podstawie samego objawu: " + symptom + ".",
+            "safeChecks": ["Sprawdź wilgotność podłoża pod powierzchnią.", "Obejrzyj spody liści i odpływ doniczki.", "Zrób wyraźne zdjęcie liścia oraz całej rośliny."]
+        }],
+        "missingInformation": ["Warunki światła", "ostatnie podlewanie", "zbliżenie objawu"],
+        "uncertainty": "To bezpieczny wynik zastępczy. Lokalny model nie zdążył z analizą zdjęcia, więc nie proponujemy zabiegu."
+    }
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -73,7 +85,14 @@ class Handler(BaseHTTPRequestHandler):
                           "Zwróć WYŁĄCZNIE JSON: {candidates:[{speciesID,commonName,latinName,confidence,reason}],"
                           "uncertainty,needsAnotherPhoto}. Daj maksymalnie 3 kandydaty. confidence 0..1. "
                           "Jeśli nie masz pewności, powiedz to; nie zgaduj.")
-                result = ollama(prompt, image)
+                try:
+                    result = ollama(prompt, image)
+                except RuntimeError:
+                    return self.send_json(200, {
+                        "candidates": [],
+                        "uncertainty": "Lokalny model nie zdążył rozpoznać zdjęcia. Spróbuj ponownie z wyraźnym ujęciem całej rośliny i liścia.",
+                        "needsAnotherPhoto": True
+                    })
                 result.setdefault("candidates", [])
                 result.setdefault("uncertainty", "Wynik wymaga potwierdzenia użytkownika.")
                 result.setdefault("needsAnotherPhoto", not bool(result["candidates"]))
@@ -85,7 +104,10 @@ class Handler(BaseHTTPRequestHandler):
                       "Na podstawie zdjęcia, jeśli jest, podaj tylko bezpieczne, odwracalne kontrole; nie dawkuj chemii i nie nakazuj podlewania. "
                       "Zwróć WYŁĄCZNIE JSON: {hypotheses:[{title,likelihood,evidence,safeChecks}],missingInformation:[string],uncertainty:string}. "
                       "likelihood: niska, średnia lub wyższa. Maksymalnie 3 hipotezy.")
-            result = ollama(prompt, image)
+            try:
+                result = ollama(prompt, image)
+            except RuntimeError:
+                return self.send_json(200, safe_fallback(symptom))
             result.setdefault("hypotheses", [])
             result.setdefault("missingInformation", ["Sprawdź wilgotność podłoża i spody liści."])
             result.setdefault("uncertainty", "To wskazówki pomocnicze, nie pewna diagnoza.")

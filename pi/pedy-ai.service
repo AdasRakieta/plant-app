@@ -7,7 +7,7 @@ After=network-online.target ollama.service
 User=pedy
 Group=pedy
 Environment=PEDY_AI_PORT=8788
-Environment=PEDY_VISION_MODEL=llava:7b
+Environment=PEDY_VISION_MODEL=moondream
 ExecStart=/usr/bin/python3 /opt/pedy/ai_server.py
 Restart=on-failure
 RestartSec=5
