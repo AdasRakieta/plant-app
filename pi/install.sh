@@ -64,7 +64,8 @@ systemctl start pedy-fetch.service
 test -s /srv/pedy/Pedy.ipa
 systemctl enable pedy-serve.service
 systemctl restart pedy-serve.service
-systemctl enable --now pedy-ai.service
+systemctl enable pedy-ai.service
+systemctl restart pedy-ai.service
 echo 'IPA pobrane do /srv/pedy/Pedy.ipa; sprawdź: systemctl status pedy-fetch.timer'
 echo 'Sieć lokalna: http://<adres-IP-maliny>:8787/app/'
 echo 'Lokalne AI: http://<adres-IP-maliny>:8788/health (tylko LAN/Tailscale)'
