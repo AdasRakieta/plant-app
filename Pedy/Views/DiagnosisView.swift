@@ -22,7 +22,7 @@ struct DiagnosisView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 Text("Diagnoza").font(.largeTitle.bold()).foregroundStyle(Palette.forest)
-                Text("Lokalne AI analizuje zdjęcie tylko na Twojej Malinie. Wynik jest hipotezą — zawsze sprawdź roślinę przed działaniem.")
+                Text("Po rozpoczęciu analizy zdjęcie i opis zostaną wysłane przez Twoją Malinę do Google Gemini. Limit: 10 analiz dziennie. Wynik jest hipotezą wymagającą sprawdzenia.")
                     .foregroundStyle(.secondary)
                 if !speciesName.isEmpty { Label("Analizujesz: \(speciesName)", systemImage: "leaf").font(.subheadline).foregroundStyle(Palette.forest) }
                 PhotosPicker(selection: $photo, matching: .images) {
@@ -42,7 +42,7 @@ struct DiagnosisView: View {
                     }
                 }
                 Button { Task { await diagnose() } } label: {
-                    if isAnalysing { HStack { ProgressView().tint(.white); Text("Analizuję lokalnie…") } }
+                    if isAnalysing { HStack { ProgressView().tint(.white); Text("Analizuję zdjęcie…") } }
                     else { Text("Pokaż bezpieczne kroki") }
                 }.buttonStyle(PrimaryButtonStyle()).disabled(symptom.isEmpty || isAnalysing)
                 if let errorMessage { Label(errorMessage, systemImage: "wifi.exclamationmark").foregroundStyle(Palette.terracotta).font(.subheadline) }

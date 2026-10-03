@@ -10,7 +10,7 @@ struct PlantSpecies: Identifiable, Hashable {
     let summary: String
     let petSafety: String
 
-    var imageName: String { "Plant-\(id)" }
+    var imageName: String { id == "aglaonema" ? "PlantHero" : "Plant-\(id)" }
 
     var difficulty: String {
         switch id {
@@ -60,7 +60,8 @@ struct PlantSpecies: Identifiable, Hashable {
         .init(id: "grubosz", commonName: "Grubosz", latinName: "Crassula ovata", light: "Bardzo jasne", watering: "Po pełnym przeschnięciu", intervalDays: 14, summary: "Sukulenta o grubych, owalnych liściach.", petSafety: "Toksyczny dla zwierząt"),
         .init(id: "paprotka", commonName: "Paprotka", latinName: "Nephrolepis exaltata", light: "Półcień", watering: "Podłoże lekko wilgotne", intervalDays: 4, summary: "Delikatne pierzaste liście, ceni wilgotne powietrze.", petSafety: "Bezpieczna dla zwierząt"),
         .init(id: "anturium", commonName: "Anturium", latinName: "Anthurium andraeanum", light: "Jasne, rozproszone", watering: "Gdy przeschnie wierzch", intervalDays: 6, summary: "Kwitnąca roślina o dekoracyjnych pochwach kwiatowych.", petSafety: "Toksyczne dla zwierząt"),
-        .init(id: "hoja", commonName: "Hoja", latinName: "Hoya carnosa", light: "Jasne, rozproszone", watering: "Gdy przeschnie większość podłoża", intervalDays: 10, summary: "Pnącze o woskowych liściach i pachnących kwiatach.", petSafety: "Bezpieczna dla zwierząt")
+        .init(id: "hoja", commonName: "Hoja", latinName: "Hoya carnosa", light: "Jasne, rozproszone", watering: "Gdy przeschnie większość podłoża", intervalDays: 10, summary: "Pnącze o woskowych liściach i pachnących kwiatach.", petSafety: "Bezpieczna dla zwierząt"),
+        .init(id: "aglaonema", commonName: "Aglaonema", latinName: "Aglaonema commutatum", light: "Jasne, rozproszone lub półcień", watering: "Gdy przeschną 2–4 cm podłoża", intervalDays: 7, summary: "Barwna roślina o lancetowatych liściach; odmiany czerwono-zielone wymagają jasnego, rozproszonego światła.", petSafety: "Toksyczna dla zwierząt")
     ]
 
     static func match(_ name: String) -> PlantSpecies? {

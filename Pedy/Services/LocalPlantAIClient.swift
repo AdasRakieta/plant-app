@@ -69,11 +69,14 @@ actor LocalPlantAIClient {
     }
 
     private func encodedImage(_ image: UIImage) throws -> String {
-        // Moondream uses a small vision input; a compact image avoids slow VPN uploads.
-        let longestSide: CGFloat = 640
+        // The Raspberry Pi runs the visual model on CPU. 384 px keeps the image
+        // useful for genus recognition while avoiding multi-minute inference.
+        let longestSide: CGFloat = 384
         let ratio = min(1, longestSide / max(image.size.width, image.size.height))
         let size = CGSize(width: image.size.width * ratio, height: image.size.height * ratio)
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
         let scaled = renderer.image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
         guard let data = scaled.jpegData(compressionQuality: 0.65), data.count <= 1_000_000 else {
             throw LocalPlantAIError.invalidImage
@@ -87,7 +90,7 @@ actor LocalPlantAIClient {
         do {
             var request = URLRequest(url: endpoint(path, on: baseURL))
             request.httpMethod = "POST"
-            request.timeoutInterval = 40
+            request.timeoutInterval = 75
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = data
             let (responseData, response) = try await URLSession.shared.data(for: request)

@@ -82,12 +82,12 @@ struct AddPlantView: View {
                     }
                     if photoImage != nil {
                         Button { Task { await recognisePlant() } } label: {
-                            Label(isRecognising ? "Rozpoznaję lokalnie…" : "Rozpoznaj gatunek lokalnie", systemImage: "sparkles")
+                            Label(isRecognising ? "Rozpoznaję…" : "Rozpoznaj gatunek przez AI", systemImage: "sparkles")
                         }.disabled(isRecognising)
                     }
                     if let recognitionError { Text(recognitionError).font(.footnote).foregroundStyle(Palette.terracotta) }
                     if !candidates.isEmpty {
-                        Text("Potwierdź gatunek — AI nie zapisuje go samodzielnie.").font(.footnote).foregroundStyle(.secondary)
+                        Text("Rozpoznanie wysyła zdjęcie przez Malinę do Google Gemini. Limit: 10 analiz dziennie. Potwierdź gatunek — AI nie zapisuje go samodzielnie.").font(.footnote).foregroundStyle(.secondary)
                         ForEach(candidates) { candidate in
                             Button {
                                 speciesName = PlantSpecies.catalog.first(where: { $0.id == candidate.speciesID })?.commonName ?? candidate.commonName
@@ -117,7 +117,7 @@ struct AddPlantView: View {
                             Text("Własne wymagania").font(.subheadline.weight(.semibold))
                             TextEditor(text: $customRequirements)
                                 .frame(minHeight: 90)
-                            Text("Np. światło, podłoże, podlewanie, nawożenie i wielkość doniczki. Te dane zostają przy roślinie oraz są przekazywane do lokalnej diagnozy.")
+                            Text("Np. światło, podłoże, podlewanie, nawożenie i wielkość doniczki. Te dane zostają przy roślinie oraz są przekazywane do Google Gemini po uruchomieniu diagnozy.")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }
                     }
