@@ -27,10 +27,10 @@ def ollama(prompt, image=None):
     message = {"role": "user", "content": prompt}
     if image:
         message["images"] = [image]
-    payload = json.dumps({"model": MODEL, "stream": False, "options": {"temperature": 0.1, "num_predict": 48}, "messages": [message]}).encode()
+    payload = json.dumps({"model": MODEL, "stream": False, "options": {"temperature": 0.1, "num_predict": 16}, "messages": [message]}).encode()
     req = urllib.request.Request(OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=18) as response:
+        with urllib.request.urlopen(req, timeout=10) as response:
             raw = json.load(response)["message"]["content"]
         return raw.strip()
     except urllib.error.HTTPError as exc:
@@ -88,8 +88,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(image, str) or len(image) < 100:
                     raise ValueError("Dodaj zdjęcie rośliny do rozpoznania.")
                 catalog = "; ".join(f"{i}:{n}" for i, n, _ in CATALOG)
-                prompt = ("Jaka roślina jest na zdjęciu? Wybierz jedną z: " + catalog + ". "
-                          "Odpowiedz wyłącznie nazwą z listy albo UNKNOWN. Nie wyjaśniaj.")
+                prompt = ("Identify the plant. Choose one: " + catalog + ". "
+                          "Reply only with the chosen name or UNKNOWN.")
                 try:
                     answer = ollama(prompt, image)
                 except RuntimeError:
@@ -107,8 +107,8 @@ class Handler(BaseHTTPRequestHandler):
             symptom = str(body.get("symptom", ""))[:200]
             species = str(body.get("speciesName", "nieustalony"))[:120]
             requirements = str(body.get("requirements", "brak dodatkowych danych"))[:1200]
-            prompt = ("Roślina: " + species + ". Objaw: " + symptom + ". Wymagania: " + requirements + ". "
-                      "W jednej krótkiej frazie opisz możliwą obserwację. Bez chemii i bez nakazu podlewania.")
+            prompt = ("Plant: " + species + ". Symptom: " + symptom + ". Context: " + requirements + ". "
+                      "State one possible observation in at most six words. No treatment advice.")
             try:
                 answer = ollama(prompt, image)
             except RuntimeError:
