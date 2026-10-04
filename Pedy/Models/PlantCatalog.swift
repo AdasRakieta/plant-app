@@ -50,6 +50,7 @@ struct PlantSpecies: Identifiable, Hashable {
     var fertilizer: String {
         switch id {
         case "aloes", "grubosz", "sansewieria", "zamiokulkas", "kaktus", "nolina": "Od kwietnia do sierpnia co 4–6 tygodni, połową dawki nawozu do sukulentów."
+        case "zygo-kaktus": "Od marca do sierpnia co 4 tygodnie, połową dawki nawozu do kaktusów leśnych lub roślin kwitnących."
         case "calathea", "maranta", "paprotka", "skrzydłokwiat": "Od marca do września co 4 tygodnie, połową dawki nawozu do roślin zielonych."
         default: "Od marca do września co 2–4 tygodnie, nawozem do roślin zielonych według etykiety."
         }
@@ -58,6 +59,7 @@ struct PlantSpecies: Identifiable, Hashable {
     var soil: String {
         switch id {
         case "aloes", "grubosz", "sansewieria", "zamiokulkas", "kaktus", "nolina": "Przepuszczalne podłoże do kaktusów i sukulentów z perlitem lub pumeksem."
+        case "zygo-kaktus": "Lekka, próchniczna mieszanka do kaktusów leśnych z perlitem i drobną korą."
         case "calathea", "maranta", "paprotka", "skrzydłokwiat": "Lekka mieszanka do roślin zielonych z włóknem kokosowym i perlitem, stale lekko wilgotna."
         case "anturium", "monstera", "epipremnum", "hoja": "Przewiewna mieszanka aroidowa: ziemia, kora, perlit i włókno kokosowe."
         default: "Dobrej jakości, przepuszczalne podłoże do roślin zielonych z dodatkiem perlitu."
@@ -109,7 +111,8 @@ struct PlantSpecies: Identifiable, Hashable {
         .init(id: "cyklamen", commonName: "Cyklamen", latinName: "Cyclamen persicum", light: "Jasne i chłodniejsze", watering: "Gdy przeschnie wierzch", intervalDays: 5, summary: "Sezonowo kwitnąca roślina, która nie lubi gorąca.", petSafety: "Toksyczny dla zwierząt"),
         .init(id: "gardenia", commonName: "Gardenia", latinName: "Gardenia jasminoides", light: "Jasne, rozproszone", watering: "Lekko wilgotne", intervalDays: 4, summary: "Pachnąca roślina kwitnąca, wrażliwa na zmianę warunków.", petSafety: "Bezpieczna dla zwierząt"),
         .init(id: "kaladium", commonName: "Kaladium", latinName: "Caladium bicolor", light: "Jasne, rozproszone", watering: "Lekko wilgotne", intervalDays: 4, summary: "Roślina o dużych, barwnych liściach.", petSafety: "Toksyczne dla zwierząt"),
-        .init(id: "kaktus", commonName: "Kaktus", latinName: "Echinopsis", light: "Bardzo jasne", watering: "Po pełnym przeschnięciu", intervalDays: 18, summary: "Sukulenta wymagająca bardzo przepuszczalnego podłoża.", petSafety: "Brak pełnych danych")
+        .init(id: "kaktus", commonName: "Kaktus", latinName: "Echinopsis", light: "Bardzo jasne", watering: "Po pełnym przeschnięciu", intervalDays: 18, summary: "Sukulenta wymagająca bardzo przepuszczalnego podłoża.", petSafety: "Brak pełnych danych"),
+        .init(id: "zygo-kaktus", commonName: "Zygokaktus", latinName: "Schlumbergera truncata", light: "Jasne, rozproszone", watering: "Gdy przeschnie wierzch podłoża", intervalDays: 7, summary: "Kaktus leśny o segmentowych pędach, który najczęściej kwitnie jesienią i zimą.", petSafety: "Bezpieczny dla zwierząt", aliases: ["Grudnik", "Kaktus bożonarodzeniowy", "Schlumbergera"])
     ]
 
     static func match(_ name: String) -> PlantSpecies? {
