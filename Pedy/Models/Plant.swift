@@ -14,6 +14,7 @@ final class Plant {
     /// Optional free-text requirements for a species not yet present in the offline atlas.
     /// Optional fields keep existing SwiftData records readable after an app update.
     var customRequirements: String?
+    var photoFilename: String?
 
     init(
         id: UUID = UUID(),

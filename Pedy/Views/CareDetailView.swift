@@ -20,7 +20,7 @@ struct CareDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 HStack(spacing: 14) {
-                    PlantThumbnail(species: PlantSpecies.match(plant.speciesName))
+                    PlantThumbnail(species: PlantSpecies.match(plant.speciesName), photoFilename: plant.photoFilename)
                     VStack(alignment: .leading) {
                         Text(plant.name).font(.title2.bold())
                         Text(plant.room.isEmpty ? "Moja roślina" : plant.room)

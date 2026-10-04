@@ -58,6 +58,16 @@ actor LocalPlantAIClient {
         return try await request(path: "/v1/identify", body: body)
     }
 
+    func sharedAtlas() async throws -> SharedAtlasResponse {
+        try await request(path: "/v1/atlas", body: [:], method: "GET")
+    }
+
+    func publishSpecies(name: String, requirements: String, source: String, image: UIImage?) async throws -> SharedAtlasPublication {
+        var body: [String: Any] = ["name": name, "requirements": requirements, "source": source, "shareConsent": true]
+        if let image { body["image"] = try PlantPhotos.jpeg(image, side: 320).base64EncodedString() }
+        return try await request(path: "/v1/atlas", body: body)
+    }
+
     func diagnose(image: UIImage?, symptom: String, speciesName: String = "", requirements: String = "") async throws -> PlantDiagnosis {
         var body: [String: Any] = ["symptom": symptom, "speciesName": speciesName, "requirements": requirements]
         if let image { body["image"] = try encodedImage(image) }
@@ -84,15 +94,15 @@ actor LocalPlantAIClient {
         return data.base64EncodedString()
     }
 
-    private func request<Response: Decodable>(path: String, body: [String: Any]) async throws -> Response {
+    private func request<Response: Decodable>(path: String, body: [String: Any], method: String = "POST") async throws -> Response {
         let data = try JSONSerialization.data(withJSONObject: body)
         guard let baseURL = await reachableBaseURL() else { throw LocalPlantAIError.unavailable }
         do {
             var request = URLRequest(url: endpoint(path, on: baseURL))
-            request.httpMethod = "POST"
+            request.httpMethod = method
             request.timeoutInterval = 75
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = data
+            request.httpBody = method == "GET" ? nil : data
             let (responseData, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw LocalPlantAIError.unavailable }
             guard (200..<300).contains(http.statusCode) else {

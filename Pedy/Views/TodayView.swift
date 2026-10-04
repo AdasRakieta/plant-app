@@ -57,7 +57,7 @@ struct TodayView: View {
                                 CareDetailView(plant: plant) { planRevision += 1 }
                             } label: {
                                 HStack {
-                                    PlantThumbnail(species: PlantSpecies.match(plant.speciesName))
+                                    PlantThumbnail(species: PlantSpecies.match(plant.speciesName), photoFilename: plant.photoFilename)
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(plant.name).font(.headline)
                                         Text("Sprawdź podłoże").font(.subheadline).foregroundStyle(.secondary)

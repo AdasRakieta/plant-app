@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import shared_atlas
 
 OLLAMA_URL = os.environ.get("PEDY_OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
 MODEL = os.environ.get("PEDY_VISION_MODEL", "llava:7b")
@@ -121,19 +122,25 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if self.path == "/v1/atlas":
+            return self.send_json(200, shared_atlas.entries())
         if self.path == "/health":
             self.send_json(200, {"status": "ok", "provider": PROVIDER, "model": GEMINI_MODEL if PROVIDER == "gemini" else MODEL, "privacy": "server does not store images; Gemini receives images when configured", "dailyLimit": 10})
         else:
             self.send_json(404, {"error": "Nie znaleziono endpointu."})
 
     def do_POST(self):
-        if self.path not in ("/v1/identify", "/v1/diagnose"):
+        if self.path not in ("/v1/identify", "/v1/diagnose", "/v1/atlas"):
             return self.send_json(404, {"error": "Nie znaleziono endpointu."})
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if not 0 < length <= MAX_BODY:
                 raise ValueError("Zdjęcie jest za duże. Wybierz plik do 8 MB.")
             body = json.loads(self.rfile.read(length))
+            if not isinstance(body, dict):
+                raise ValueError("Niepoprawne żądanie.")
+            if self.path == "/v1/atlas":
+                return self.send_json(200, shared_atlas.publish(body))
             image = body.get("image")
             if self.path == "/v1/identify":
                 if not isinstance(image, str) or len(image) < 100:

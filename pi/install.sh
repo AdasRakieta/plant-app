@@ -16,6 +16,7 @@ for command in python3 systemctl; do
     exit 2
   fi
 done
+python3 -c 'import PIL' || { echo 'Brakuje Pillow: sudo apt install python3-pil' >&2; exit 2; }
 
 if ! id pedy >/dev/null 2>&1; then
   useradd --system --home-dir /nonexistent --shell /usr/sbin/nologin pedy
@@ -28,6 +29,7 @@ install -d -o root -g root -m 0700 /etc/pedy
 install -o root -g root -m 0755 pi/fetch_ipa.py /opt/pedy/fetch_ipa.py
 install -o root -g root -m 0755 pi/serve_ipa.py /opt/pedy/serve_ipa.py
 install -o root -g root -m 0755 pi/ai_server.py /opt/pedy/ai_server.py
+install -o root -g root -m 0644 pi/shared_atlas.py /opt/pedy/shared_atlas.py
 install -o root -g root -m 0644 pi/pedy-fetch.service /etc/systemd/system/pedy-fetch.service
 install -o root -g root -m 0644 pi/pedy-fetch.timer /etc/systemd/system/pedy-fetch.timer
 install -o root -g root -m 0644 pi/pedy-serve.service /etc/systemd/system/pedy-serve.service

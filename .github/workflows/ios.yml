@@ -11,7 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Test IPA fetcher
-        run: python3 -m unittest discover -s pi -p 'test_*.py'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/pedy-python"
+          "$RUNNER_TEMP/pedy-python/bin/pip" install Pillow
+          "$RUNNER_TEMP/pedy-python/bin/python" -m unittest discover -s pi -p 'test_*.py'
       - name: Generate Xcode project
         run: |
           brew install xcodegen

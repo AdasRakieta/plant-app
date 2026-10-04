@@ -30,6 +30,7 @@ struct AtlasView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Atlas roślin").font(.largeTitle.bold()).foregroundStyle(Palette.forest)
+                NavigationLink("Wspólny atlas · dodaj lub pobierz gatunki") { SharedAtlasView() }
                 Text("Wybierz gatunek, poznaj jego potrzeby i dodaj go do swojej kolekcji.")
                     .foregroundStyle(.secondary)
                 HStack(spacing: 10) {
@@ -44,7 +45,7 @@ struct AtlasView: View {
                     ForEach(customPlants) { plant in
                         Button { selectedCustom = plant } label: {
                             HStack(spacing: 14) {
-                                PlantThumbnail()
+                                PlantThumbnail(photoFilename: plant.photoFilename)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(plant.speciesName).font(.headline)
                                     Text(plant.customRequirements?.isEmpty == false ? "Własne wymagania zapisane" : "Wymagania do uzupełnienia")
@@ -100,7 +101,8 @@ private struct CustomSpeciesDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    PlantThumbnail().frame(maxWidth: .infinity, alignment: .leading)
+                    PlantThumbnail(photoFilename: plant.photoFilename).frame(maxWidth: .infinity, alignment: .leading)
+                    NavigationLink("Dodaj do wspólnego atlasu") { SharedAtlasForm(plant: plant) }
                     Text(plant.speciesName).font(.largeTitle.bold()).foregroundStyle(Palette.forest)
                     Text("Gatunek dodany przez Ciebie").foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 8) {
@@ -150,7 +152,11 @@ struct SpeciesDetailView: View {
 
 struct PlantThumbnail: View {
     var species: PlantSpecies? = nil
+    var photoFilename: String? = nil
     var body: some View {
-        Image(species?.imageName ?? "PlantHero").resizable().scaledToFill().frame(width: 64, height: 64).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
+        Group {
+            if let image = PlantPhotos.image(photoFilename) { Image(uiImage: image).resizable() }
+            else { Image(species?.imageName ?? "PlantHero").resizable() }
+        }.scaledToFill().frame(width: 64, height: 64).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

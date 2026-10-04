@@ -21,7 +21,7 @@ struct PlantsView: View {
                         PlantDetailView(plant: plant)
                     } label: {
                         HStack(spacing: 12) {
-                            PlantThumbnail(species: PlantSpecies.match(plant.speciesName))
+                            PlantThumbnail(species: PlantSpecies.match(plant.speciesName), photoFilename: plant.photoFilename)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(plant.name).font(.headline)
                                 Text([plant.speciesName, plant.room].filter { !$0.isEmpty }.joined(separator: " · "))
@@ -65,7 +65,8 @@ struct AddPlantView: View {
 
     private var validName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-    init(species: PlantSpecies? = nil, customSpeciesName: String = "", customRequirements: String = "") {
+    init(species: PlantSpecies? = nil, customSpeciesName: String = "", customRequirements: String = "", initialPhoto: UIImage? = nil) {
+        _photoImage = State(initialValue: initialPhoto)
         _speciesName = State(initialValue: species?.commonName ?? "")
         _checkIntervalDays = State(initialValue: species?.intervalDays ?? 3)
         _customSpeciesName = State(initialValue: customSpeciesName)
@@ -78,9 +79,10 @@ struct AddPlantView: View {
                 Section("Roślina") {
                     TextField("Własna nazwa", text: $name)
                     PhotosPicker(selection: $photoItem, matching: .images) {
-                        Label(photoImage == nil ? "Wybierz zdjęcie do rozpoznania" : "Zmień zdjęcie", systemImage: "camera.viewfinder")
+                        Label(photoImage == nil ? "Dodaj zdjęcie lub gotową grafikę" : "Zmień zdjęcie", systemImage: "photo")
                     }
                     if photoImage != nil {
+                        Image(uiImage: photoImage!).resizable().scaledToFit().frame(maxHeight: 180)
                         Button { Task { await recognisePlant() } } label: {
                             Label(isRecognising ? "Rozpoznaję…" : "Rozpoznaj gatunek przez AI", systemImage: "sparkles")
                         }.disabled(isRecognising)
@@ -149,9 +151,11 @@ struct AddPlantView: View {
                         )
                         context.insert(plant)
                         do {
+                            if let photoImage { plant.photoFilename = try PlantPhotos.save(photoImage) }
                             try context.save()
                             dismiss()
                         } catch {
+                            PlantPhotos.remove(plant.photoFilename)
                             context.rollback()
                             saveError = "Nie udało się zapisać rośliny. Spróbuj ponownie."
                         }
@@ -197,6 +201,9 @@ struct AddPlantView: View {
 
 struct PlantDetailView: View {
     let plant: Plant
+    @Environment(\.modelContext) private var context
+    @State private var photoItem: PhotosPickerItem?
+    @State private var photoMessage: String?
     @Query(sort: \CareEvent.occurredAt, order: .reverse) private var allEvents: [CareEvent]
 
     private var events: [CareEvent] { allEvents.filter { $0.plantID == plant.id } }
@@ -204,6 +211,10 @@ struct PlantDetailView: View {
     var body: some View {
         List {
             Section {
+                PlantThumbnail(species: PlantSpecies.match(plant.speciesName), photoFilename: plant.photoFilename)
+                PhotosPicker(selection: $photoItem, matching: .images) { Label("Zmień zdjęcie lub grafikę", systemImage: "photo") }
+                if let photoMessage { Text(photoMessage).font(.footnote) }
+                NavigationLink("Dodaj gatunek do wspólnego atlasu") { SharedAtlasForm(plant: plant) }
                 Text(plant.speciesName.isEmpty ? "Gatunek nieustalony" : plant.speciesName)
                     .foregroundStyle(.secondary)
                 if !plant.room.isEmpty { Label(plant.room, systemImage: "house") }
@@ -234,5 +245,23 @@ struct PlantDetailView: View {
         .scrollContentBackground(.hidden)
         .background(Palette.background)
         .navigationTitle(plant.name)
+        .onChange(of: photoItem) { _, item in
+            Task { @MainActor in
+                var newFile: String?
+                let oldFile = plant.photoFilename
+                do {
+                    guard let data = try await item?.loadTransferable(type: Data.self), let image = UIImage(data: data) else { throw LocalPlantAIError.invalidImage }
+                    newFile = try PlantPhotos.save(image)
+                    plant.photoFilename = newFile
+                    try context.save()
+                    PlantPhotos.remove(oldFile)
+                    photoMessage = "Zdjęcie zapisane na urządzeniu."
+                } catch {
+                    plant.photoFilename = oldFile
+                    PlantPhotos.remove(newFile)
+                    photoMessage = "Nie udało się zapisać zdjęcia. Spróbuj ponownie."
+                }
+            }
+        }
     }
 }
