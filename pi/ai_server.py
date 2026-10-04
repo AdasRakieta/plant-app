@@ -134,7 +134,12 @@ def identification_candidate(answer):
     known = catalog_match(answer)
     if known:
         return known
-    clean = " ".join(answer.split()).strip(" .,:;-")
+    lines = [line.strip() for line in answer.splitlines() if line.strip()]
+    common = next((line.split(":", 1)[1].strip() for line in lines
+                   if line.casefold().startswith(("common:", "nazwa:", "gatunek:"))), "")
+    latin = next((line.split(":", 1)[1].strip() for line in lines
+                  if line.casefold().startswith(("latin:", "łacińska:"))), "")
+    clean = " ".join((common or answer).split()).strip(" .,:;-")
     if not clean or clean.casefold() in {"unknown", "nieznany", "nie wiem"}:
         return None
     # This is only a displayed proposal. The client stores it as a custom name
@@ -142,7 +147,7 @@ def identification_candidate(answer):
     return {
         "speciesID": None,
         "commonName": clean[:120],
-        "latinName": None,
+        "latinName": latin[:120] or None,
         "confidence": 0.30,
         "reason": "Gatunek spoza lokalnego atlasu — potwierdź lub popraw nazwę.",
     }
@@ -186,8 +191,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(image, str) or len(image) < 100:
                     raise ValueError("Dodaj zdjęcie rośliny do rozpoznania.")
                 catalog = "; ".join(f"{i}:{n}" for i, n, _ in CATALOG)
-                prompt = ("Identify the plant. Choose one: " + catalog + ". "
-                          "Reply only with the chosen name or UNKNOWN.")
+                prompt = (
+                    "Identify the most likely houseplant from the image. Do not restrict the answer to this local catalog: "
+                    + catalog + ". If a catalog entry matches exactly, use its common name. "
+                    "If it is outside the catalog, still name the best candidate so the user can create a custom entry. "
+                    "Reply with exactly two lines: COMMON: Polish or common name; LATIN: scientific name. "
+                    "Use COMMON: UNKNOWN only when it is not possible to identify a plant at all."
+                )
                 try:
                     answer = ollama(prompt, image)
                 except RuntimeError as exc:
