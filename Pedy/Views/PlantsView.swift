@@ -4,8 +4,12 @@ import PhotosUI
 import UIKit
 
 struct PlantsView: View {
+    @Environment(\.modelContext) private var context
     @Query(sort: \Plant.name) private var plants: [Plant]
+    @Query(sort: \CareEvent.occurredAt) private var allEvents: [CareEvent]
     @State private var showingAdd = false
+    @State private var plantPendingDeletion: Plant?
+    @State private var deletionError: String?
 
     var body: some View {
         Group {
@@ -29,9 +33,12 @@ struct PlantsView: View {
                                 Text("Kontrola: \(plant.nextCheckDate.formatted(date: .abbreviated, time: .omitted))")
                                     .font(.caption).foregroundStyle(Palette.terracotta)
                             }
-                        }
-                        .padding(.vertical, 5)
                     }
+                    .padding(.vertical, 5)
+                    .swipeActions {
+                        Button("Usuń", role: .destructive) { plantPendingDeletion = plant }
+                    }
+                }
                 }
                 .scrollContentBackground(.hidden)
             }
@@ -43,6 +50,23 @@ struct PlantsView: View {
                 .accessibilityLabel("Dodaj roślinę")
         }
         .sheet(isPresented: $showingAdd) { AddPlantView() }
+        .confirmationDialog("Usunąć roślinę?", isPresented: Binding(
+            get: { plantPendingDeletion != nil }, set: { if !$0 { plantPendingDeletion = nil } }
+        ), presenting: plantPendingDeletion) { plant in
+            Button("Usuń roślinę, zdjęcie i historię", role: .destructive) { delete(plant) }
+            Button("Anuluj", role: .cancel) { plantPendingDeletion = nil }
+        } message: { plant in
+            Text("Usuniesz \(plant.name), jej zdjęcie oraz \(allEvents.filter { $0.plantID == plant.id }.count) wpisów historii. Tego nie można cofnąć.")
+        }
+        .alert("Nie udało się usunąć rośliny", isPresented: Binding(
+            get: { deletionError != nil }, set: { if !$0 { deletionError = nil } }
+        )) { Button("OK", role: .cancel) {} } message: { Text(deletionError ?? "") }
+    }
+
+    private func delete(_ plant: Plant) {
+        do { try PlantDeletion.delete(plant, events: allEvents, in: context) }
+        catch { deletionError = "Roślina pozostała na liście. Spróbuj ponownie." }
+        plantPendingDeletion = nil
     }
 }
 
@@ -227,12 +251,15 @@ struct AddPlantView: View {
 struct PlantDetailView: View {
     let plant: Plant
     @Environment(\.modelContext) private var context
+    @Environment(\.dismiss) private var dismiss
     @State private var photoItem: PhotosPickerItem?
     @State private var photoMessage: String?
     @State private var editing = false
     @State private var sharedNames = Set<String>()
     @State private var sharedAtlasChecked = false
     @State private var sharedAtlasError: String?
+    @State private var confirmingDeletion = false
+    @State private var deletionError: String?
     @Query(sort: \CareEvent.occurredAt, order: .reverse) private var allEvents: [CareEvent]
 
     private var events: [CareEvent] { allEvents.filter { $0.plantID == plant.id } }
@@ -271,11 +298,23 @@ struct PlantDetailView: View {
                     }
                 }
             }
+            Section {
+                Button("Usuń tę roślinę", role: .destructive) { confirmingDeletion = true }
+            } footer: {
+                Text("Usunięte zostaną także zdjęcie i historia kontroli tej rośliny.")
+            }
         }
         .scrollContentBackground(.hidden)
         .background(Palette.background)
         .navigationTitle(plant.name)
         .sheet(isPresented: $editing) { EditPlantInstructionsView(plant: plant) }
+        .confirmationDialog("Usunąć \(plant.name)?", isPresented: $confirmingDeletion) {
+            Button("Usuń roślinę, zdjęcie i historię", role: .destructive) { deletePlant() }
+            Button("Anuluj", role: .cancel) {}
+        }
+        .alert("Nie udało się usunąć rośliny", isPresented: Binding(
+            get: { deletionError != nil }, set: { if !$0 { deletionError = nil } }
+        )) { Button("OK", role: .cancel) {} } message: { Text(deletionError ?? "") }
         .task { await checkSharedAtlas() }
         .onChange(of: photoItem) { _, item in
             Task { @MainActor in
@@ -320,6 +359,13 @@ struct PlantDetailView: View {
             sharedNames = Set(entries.map { sharedAtlasKey($0.name) })
             sharedAtlasChecked = true
         } catch { sharedAtlasError = error.localizedDescription }
+    }
+
+    private func deletePlant() {
+        do {
+            try PlantDeletion.delete(plant, events: allEvents, in: context)
+            dismiss()
+        } catch { deletionError = "Roślina pozostała w kolekcji. Spróbuj ponownie." }
     }
 }
 
