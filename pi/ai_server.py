@@ -128,6 +128,25 @@ def catalog_match(answer):
             return {"speciesID": species_id, "commonName": common, "latinName": latin, "confidence": 0.55, "reason": answer[:280]}
     return None
 
+
+def identification_candidate(answer):
+    """Preserve a model answer even when the offline catalog has no matching ID."""
+    known = catalog_match(answer)
+    if known:
+        return known
+    clean = " ".join(answer.split()).strip(" .,:;-")
+    if not clean or clean.casefold() in {"unknown", "nieznany", "nie wiem"}:
+        return None
+    # This is only a displayed proposal. The client stores it as a custom name
+    # after an explicit tap; it never silently creates an atlas species.
+    return {
+        "speciesID": None,
+        "commonName": clean[:120],
+        "latinName": None,
+        "confidence": 0.30,
+        "reason": "Gatunek spoza lokalnego atlasu — potwierdź lub popraw nazwę.",
+    }
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
@@ -173,7 +192,7 @@ class Handler(BaseHTTPRequestHandler):
                     answer = ollama(prompt, image)
                 except RuntimeError as exc:
                     return self.send_json(503, {"error": str(exc)})
-                candidate = catalog_match(answer)
+                candidate = identification_candidate(answer)
                 return self.send_json(200, {
                     "candidates": [candidate] if candidate else [],
                     "uncertainty": "Wynik AI wymaga potwierdzenia. Dokładny gatunek i odmiana mogą być niepewne.",

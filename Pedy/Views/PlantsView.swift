@@ -88,25 +88,6 @@ struct AddPlantView: View {
                         }.disabled(isRecognising)
                     }
                     if let recognitionError { Text(recognitionError).font(.footnote).foregroundStyle(Palette.terracotta) }
-                    if !candidates.isEmpty {
-                        Text("Rozpoznanie wysyła zdjęcie przez Malinę do Google Gemini. Limit: 10 analiz dziennie. Potwierdź gatunek — AI nie zapisuje go samodzielnie.").font(.footnote).foregroundStyle(.secondary)
-                        ForEach(candidates) { candidate in
-                            Button {
-                                speciesName = PlantSpecies.catalog.first(where: { $0.id == candidate.speciesID })?.commonName ?? candidate.commonName
-                                if name.isEmpty { name = speciesName }
-                                if let species = PlantSpecies.match(speciesName) { checkIntervalDays = species.intervalDays }
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(candidate.commonName)
-                                        if let latin = candidate.latinName { Text(latin).font(.caption).italic() }
-                                    }
-                                    Spacer()
-                                    Text("\(Int(candidate.confidence * 100))%")
-                                }
-                            }.foregroundStyle(Palette.forest)
-                        }
-                    }
                     Picker("Gatunek", selection: $speciesName) {
                         Text("Wybierz później").tag("")
                         ForEach(PlantSpecies.catalog) { item in
@@ -115,6 +96,29 @@ struct AddPlantView: View {
                     }
                     TextField("Gatunek lub odmiana spoza atlasu", text: $customSpeciesName)
                     TextField("Pomieszczenie", text: $room)
+                }
+                if !candidates.isEmpty {
+                    Section("Wynik rozpoznania") {
+                        Text("Potwierdź albo popraw nazwę. AI nie zapisuje gatunku automatycznie.").font(.footnote).foregroundStyle(.secondary)
+                        ForEach(candidates) { candidate in
+                            Button { apply(candidate) } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Palette.terracotta)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(candidate.commonName).font(.headline)
+                                        if let latin = candidate.latinName { Text(latin).font(.caption).italic() }
+                                        Text(candidate.speciesID == nil ? "Spoza atlasu — utworzę wpis własny" : "W atlasie aplikacji")
+                                            .font(.caption2).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Text("\(Int(candidate.confidence * 100))%")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Wybierz gatunek \(candidate.commonName)")
+                        }
+                    }
                 }
                 Section("Instrukcje pielęgnacji") {
                     CareInstructionsEditor(speciesName: customSpeciesName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? speciesName : customSpeciesName, instructions: $customRequirements)
@@ -186,13 +190,29 @@ struct AddPlantView: View {
         do {
             let identification = try await LocalPlantAIClient.shared.identify(image: photoImage)
             await MainActor.run {
-                candidates = identification.candidates.filter { candidate in PlantSpecies.catalog.contains(where: { $0.id == candidate.speciesID }) }
+                candidates = identification.candidates
                 if candidates.isEmpty { recognitionError = identification.uncertainty }
             }
         } catch {
             await MainActor.run { recognitionError = error.localizedDescription }
         }
         await MainActor.run { isRecognising = false }
+    }
+
+    private func apply(_ candidate: AIPlantCandidate) {
+        let atlasSpecies = candidate.speciesID.flatMap { id in PlantSpecies.catalog.first(where: { $0.id == id }) }
+        if let atlasSpecies {
+            speciesName = atlasSpecies.commonName
+            customSpeciesName = ""
+            checkIntervalDays = atlasSpecies.intervalDays
+            if customRequirements.isEmpty { customRequirements = atlasSpecies.editableInstructions }
+        } else {
+            speciesName = ""
+            customSpeciesName = candidate.commonName
+        }
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { name = candidate.commonName }
+        candidates = []
+        recognitionError = "Wybrano: \(candidate.commonName). Możesz dowolnie poprawić gatunek i instrukcje przed zapisaniem."
     }
 }
 

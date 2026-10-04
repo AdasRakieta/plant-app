@@ -22,6 +22,12 @@ class Responses(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 ai.response_text(response)
 
+    def test_non_catalog_candidate_is_kept_for_manual_confirmation(self):
+        candidate = ai.identification_candidate("Philodendron Pink Princess")
+        self.assertIsNone(candidate["speciesID"])
+        self.assertEqual(candidate["commonName"], "Philodendron Pink Princess")
+        self.assertIsNone(ai.identification_candidate("UNKNOWN"))
+
     def test_daily_quota_survives_connections_and_concurrency(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(ai, "QUOTA_DB", directory + "/quota.db"):
             ai.reserve_request()
