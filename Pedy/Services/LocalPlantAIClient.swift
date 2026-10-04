@@ -17,6 +17,8 @@ struct PlantIdentification: Codable {
     let needsAnotherPhoto: Bool
 }
 
+struct GeneratedCareProfile: Decodable { let requirements: String }
+
 struct DiagnosisHypothesis: Codable, Identifiable {
     let title: String
     let likelihood: String
@@ -60,6 +62,10 @@ actor LocalPlantAIClient {
 
     func sharedAtlas() async throws -> SharedAtlasResponse {
         try await request(path: "/v1/atlas", body: [:], method: "GET")
+    }
+
+    func careProfile(speciesName: String) async throws -> GeneratedCareProfile {
+        try await request(path: "/v1/care-profile", body: ["speciesName": speciesName])
     }
 
     func publishSpecies(name: String, requirements: String, source: String, image: UIImage?) async throws -> SharedAtlasPublication {

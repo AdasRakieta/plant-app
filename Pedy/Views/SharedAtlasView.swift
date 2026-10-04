@@ -113,7 +113,7 @@ struct SharedAtlasForm: View {
             Section("Gatunek") {
                 TextField("Nazwa gatunku lub odmiany", text: $name)
                 Text("Wymagania: światło, podłoże, nawożenie, doniczka. Nieznane informacje oznacz jako brak danych.").font(.footnote)
-                TextEditor(text: $requirements).frame(minHeight: 140)
+                CareInstructionsEditor(speciesName: name, instructions: $requirements)
                 TextField("Źródło informacji lub własna obserwacja", text: $source)
                 PhotosPicker(selection: $photoItem, matching: .images) { Label("Wybierz zdjęcie lub gotową grafikę", systemImage: "photo") }
                 if let image { Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 180) }

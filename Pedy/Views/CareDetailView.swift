@@ -36,7 +36,10 @@ struct CareDetailView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Image(PlantSpecies.match(plant.speciesName)?.imageName ?? "PlantHero").resizable().scaledToFill().frame(height: 170).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
                     Text("Jak to sprawdzić?").font(.title3.bold()).foregroundStyle(Palette.terracotta)
-                    Text("Sprawdź podłoże także pod powierzchnią. Oceń, czy jest nadal wilgotne, czy już suche. \(PlantSpecies.match(plant.speciesName)?.watering ?? "Nie podlewaj tylko według kalendarza.")")
+                    Text("Sprawdź podłoże także pod powierzchnią. Oceń, czy jest nadal wilgotne, czy już suche.")
+                    if plant.customRequirements == nil {
+                        Text(PlantSpecies.match(plant.speciesName)?.watering ?? "Nie podlewaj tylko według kalendarza.")
+                    }
                     if let requirements = plant.customRequirements, !requirements.isEmpty {
                         Divider()
                         Label("Własne wymagania", systemImage: "list.bullet.clipboard")

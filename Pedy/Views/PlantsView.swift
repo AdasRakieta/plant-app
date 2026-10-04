@@ -114,16 +114,13 @@ struct AddPlantView: View {
                         }
                     }
                     TextField("Gatunek lub odmiana spoza atlasu", text: $customSpeciesName)
-                    if !customSpeciesName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Własne wymagania").font(.subheadline.weight(.semibold))
-                            TextEditor(text: $customRequirements)
-                                .frame(minHeight: 90)
-                            Text("Np. światło, podłoże, podlewanie, nawożenie i wielkość doniczki. Te dane zostają przy roślinie oraz są przekazywane do Google Gemini po uruchomieniu diagnozy.")
-                                .font(.footnote).foregroundStyle(.secondary)
-                        }
-                    }
                     TextField("Pomieszczenie", text: $room)
+                }
+                Section("Instrukcje pielęgnacji") {
+                    CareInstructionsEditor(speciesName: customSpeciesName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? speciesName : customSpeciesName, instructions: $customRequirements)
+                    if let species = PlantSpecies.match(speciesName), customRequirements.isEmpty {
+                        Button("Wczytaj instrukcje z atlasu do edycji") { customRequirements = species.editableInstructions }
+                    }
                 }
                 Section("Kontrola podłoża") {
                     DatePicker("Pierwsza kontrola", selection: $nextCheckDate, displayedComponents: .date)
@@ -204,6 +201,7 @@ struct PlantDetailView: View {
     @Environment(\.modelContext) private var context
     @State private var photoItem: PhotosPickerItem?
     @State private var photoMessage: String?
+    @State private var editing = false
     @Query(sort: \CareEvent.occurredAt, order: .reverse) private var allEvents: [CareEvent]
 
     private var events: [CareEvent] { allEvents.filter { $0.plantID == plant.id } }
@@ -215,6 +213,7 @@ struct PlantDetailView: View {
                 PhotosPicker(selection: $photoItem, matching: .images) { Label("Zmień zdjęcie lub grafikę", systemImage: "photo") }
                 if let photoMessage { Text(photoMessage).font(.footnote) }
                 NavigationLink("Dodaj gatunek do wspólnego atlasu") { SharedAtlasForm(plant: plant) }
+                Button("Edytuj roślinę i wszystkie instrukcje") { editing = true }
                 Text(plant.speciesName.isEmpty ? "Gatunek nieustalony" : plant.speciesName)
                     .foregroundStyle(.secondary)
                 if !plant.room.isEmpty { Label(plant.room, systemImage: "house") }
@@ -245,6 +244,7 @@ struct PlantDetailView: View {
         .scrollContentBackground(.hidden)
         .background(Palette.background)
         .navigationTitle(plant.name)
+        .sheet(isPresented: $editing) { EditPlantInstructionsView(plant: plant) }
         .onChange(of: photoItem) { _, item in
             Task { @MainActor in
                 var newFile: String?
