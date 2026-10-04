@@ -25,11 +25,13 @@ class CareProfileTests(unittest.TestCase):
             model.assert_not_called()
 
     def test_empty_output_is_error(self):
-        with patch.object(ai_server, "ollama", return_value=""):
-            with self.assertRaises(RuntimeError):
-                ai_server.care_profile({"speciesName": "Monstera"})
+        with tempfile.TemporaryDirectory() as directory, patch.object(ai_server, "QUOTA_DB", directory + "/quota.db"):
+            with patch.object(ai_server, "ollama", return_value=""):
+                with self.assertRaises(RuntimeError):
+                    ai_server.care_profile({"speciesName": "Monstera"})
 
     def test_provider_error_is_not_fake_success(self):
-        with patch.object(ai_server, "ollama", side_effect=RuntimeError("Limit")):
-            with self.assertRaisesRegex(RuntimeError, "Limit"):
-                ai_server.care_profile({"speciesName": "Monstera"})
+        with tempfile.TemporaryDirectory() as directory, patch.object(ai_server, "QUOTA_DB", directory + "/quota.db"):
+            with patch.object(ai_server, "ollama", side_effect=RuntimeError("Limit")):
+                with self.assertRaisesRegex(RuntimeError, "Limit"):
+                    ai_server.care_profile({"speciesName": "Monstera"})
