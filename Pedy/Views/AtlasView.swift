@@ -96,18 +96,33 @@ private struct CustomSpeciesDetailView: View {
     let plant: Plant
     @Environment(\.dismiss) private var dismiss
     @State private var adding = false
+    @State private var sharedNames = Set<String>()
+    @State private var sharedAtlasChecked = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     PlantThumbnail(photoFilename: plant.photoFilename).frame(maxWidth: .infinity, alignment: .leading)
-                    NavigationLink("Dodaj do wspólnego atlasu") { SharedAtlasForm(plant: plant) }
+                    if sharedAtlasChecked {
+                        if sharedNames.contains(sharedAtlasKey(plant.speciesName)) {
+                            Label("Ten gatunek jest już we wspólnym atlasie", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(Palette.forest)
+                        } else {
+                            Label("Tego gatunku nie ma jeszcze we wspólnym atlasie", systemImage: "circle.dashed")
+                                .foregroundStyle(.secondary)
+                            NavigationLink("Dodaj do wspólnego atlasu") { SharedAtlasForm(plant: plant) }
+                        }
+                    } else { HStack { ProgressView(); Text("Sprawdzam wspólny atlas…") }.font(.footnote) }
                     Text(plant.speciesName).font(.largeTitle.bold()).foregroundStyle(Palette.forest)
                     Text("Gatunek dodany przez Ciebie").foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Wymagania", systemImage: "list.bullet.clipboard") .font(.headline)
-                        Text(plant.customRequirements?.isEmpty == false ? plant.customRequirements! : "Brak zapisanych wymagań. Uzupełnij je w szczegółach rośliny, zanim oprzesz na nich pielęgnację.")
+                        if let requirements = plant.customRequirements, !requirements.isEmpty {
+                            CareGuideCard(requirements: requirements)
+                        } else {
+                            Text("Brak zapisanych wymagań. Uzupełnij je w szczegółach rośliny, zanim oprzesz na nich pielęgnację.")
+                        }
                     }.padding(18).background(Palette.surface, in: RoundedRectangle(cornerRadius: 18))
                     Button("Dodaj kolejny egzemplarz") { adding = true }.buttonStyle(PrimaryButtonStyle())
                 }.padding(20)
@@ -115,6 +130,12 @@ private struct CustomSpeciesDetailView: View {
             .navigationTitle("Twój gatunek").navigationBarTitleDisplayMode(.inline)
             .toolbar { Button("Gotowe") { dismiss() } }
             .sheet(isPresented: $adding) { AddPlantView(customSpeciesName: plant.speciesName, customRequirements: plant.customRequirements ?? "") }
+            .task {
+                if let entries = try? await LocalPlantAIClient.shared.sharedAtlas().entries {
+                    sharedNames = Set(entries.map { sharedAtlasKey($0.name) })
+                    sharedAtlasChecked = true
+                }
+            }
         }
     }
 }

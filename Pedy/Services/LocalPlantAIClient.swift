@@ -7,6 +7,7 @@ struct AIPlantCandidate: Codable, Identifiable, Hashable {
     let latinName: String?
     let confidence: Double
     let reason: String?
+    let requirements: String?
 
     var id: String { speciesID ?? commonName }
 }

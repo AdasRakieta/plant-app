@@ -23,10 +23,11 @@ class Responses(unittest.TestCase):
                 ai.response_text(response)
 
     def test_non_catalog_candidate_is_kept_for_manual_confirmation(self):
-        candidate = ai.identification_candidate("COMMON: Figowiec tępy Ginseng\nLATIN: Ficus microcarpa")
+        candidate = ai.identification_candidate("COMMON: Figowiec tępy Ginseng\nLATIN: Ficus microcarpa\nSUMMARY: Bonsai.\nLIGHT: Jasne.\nWATERING: Po przeschnięciu.")
         self.assertIsNone(candidate["speciesID"])
         self.assertEqual(candidate["commonName"], "Figowiec tępy Ginseng")
         self.assertEqual(candidate["latinName"], "Ficus microcarpa")
+        self.assertIn("Światło: Jasne.", candidate["requirements"])
         self.assertIsNone(ai.identification_candidate("UNKNOWN"))
 
     def test_daily_quota_survives_connections_and_concurrency(self):

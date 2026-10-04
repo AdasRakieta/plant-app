@@ -191,7 +191,10 @@ struct AddPlantView: View {
             let identification = try await LocalPlantAIClient.shared.identify(image: photoImage)
             await MainActor.run {
                 candidates = identification.candidates
-                if candidates.isEmpty { recognitionError = identification.uncertainty }
+                if let candidate = candidates.first {
+                    populate(candidate, confirmed: false)
+                    recognitionError = "AI uzupełniło gatunek i instrukcje. Sprawdź dane oraz potwierdź kandydaturę poniżej."
+                } else { recognitionError = identification.uncertainty }
             }
         } catch {
             await MainActor.run { recognitionError = error.localizedDescription }
@@ -199,7 +202,9 @@ struct AddPlantView: View {
         await MainActor.run { isRecognising = false }
     }
 
-    private func apply(_ candidate: AIPlantCandidate) {
+    private func apply(_ candidate: AIPlantCandidate) { populate(candidate, confirmed: true) }
+
+    private func populate(_ candidate: AIPlantCandidate, confirmed: Bool) {
         let atlasSpecies = candidate.speciesID.flatMap { id in PlantSpecies.catalog.first(where: { $0.id == id }) }
         if let atlasSpecies {
             speciesName = atlasSpecies.commonName
@@ -209,10 +214,13 @@ struct AddPlantView: View {
         } else {
             speciesName = ""
             customSpeciesName = candidate.commonName
+            if let requirements = candidate.requirements, !requirements.isEmpty { customRequirements = requirements }
         }
         if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { name = candidate.commonName }
-        candidates = []
-        recognitionError = "Wybrano: \(candidate.commonName). Możesz dowolnie poprawić gatunek i instrukcje przed zapisaniem."
+        if confirmed {
+            candidates = []
+            recognitionError = "Wybrano: \(candidate.commonName). Możesz dowolnie poprawić gatunek i instrukcje przed zapisaniem."
+        }
     }
 }
 
@@ -222,6 +230,9 @@ struct PlantDetailView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var photoMessage: String?
     @State private var editing = false
+    @State private var sharedNames = Set<String>()
+    @State private var sharedAtlasChecked = false
+    @State private var sharedAtlasError: String?
     @Query(sort: \CareEvent.occurredAt, order: .reverse) private var allEvents: [CareEvent]
 
     private var events: [CareEvent] { allEvents.filter { $0.plantID == plant.id } }
@@ -232,7 +243,7 @@ struct PlantDetailView: View {
                 PlantThumbnail(species: PlantSpecies.match(plant.speciesName), photoFilename: plant.photoFilename)
                 PhotosPicker(selection: $photoItem, matching: .images) { Label("Zmień zdjęcie lub grafikę", systemImage: "photo") }
                 if let photoMessage { Text(photoMessage).font(.footnote) }
-                NavigationLink("Dodaj gatunek do wspólnego atlasu") { SharedAtlasForm(plant: plant) }
+                sharedAtlasStatus
                 Button("Edytuj roślinę i wszystkie instrukcje") { editing = true }
                 Text(plant.speciesName.isEmpty ? "Gatunek nieustalony" : plant.speciesName)
                     .foregroundStyle(.secondary)
@@ -265,6 +276,7 @@ struct PlantDetailView: View {
         .background(Palette.background)
         .navigationTitle(plant.name)
         .sheet(isPresented: $editing) { EditPlantInstructionsView(plant: plant) }
+        .task { await checkSharedAtlas() }
         .onChange(of: photoItem) { _, item in
             Task { @MainActor in
                 var newFile: String?
@@ -284,4 +296,34 @@ struct PlantDetailView: View {
             }
         }
     }
+
+    @ViewBuilder private var sharedAtlasStatus: some View {
+        if sharedAtlasChecked {
+            if sharedNames.contains(sharedAtlasKey(plant.speciesName)) {
+                Label("Ten gatunek jest już we wspólnym atlasie", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(Palette.forest)
+            } else if plant.speciesName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("Uzupełnij gatunek, aby porównać go ze wspólnym atlasem.").font(.footnote).foregroundStyle(.secondary)
+            } else {
+                Label("Tego gatunku nie ma jeszcze we wspólnym atlasie", systemImage: "circle.dashed")
+                    .foregroundStyle(.secondary)
+                NavigationLink("Dodaj gatunek do wspólnego atlasu") { SharedAtlasForm(plant: plant) }
+            }
+        } else if let sharedAtlasError {
+            Text("Nie sprawdzono wspólnego atlasu: \(sharedAtlasError)").font(.footnote).foregroundStyle(.secondary)
+        } else { HStack { ProgressView(); Text("Sprawdzam wspólny atlas…") }.font(.footnote) }
+    }
+
+    @MainActor private func checkSharedAtlas() async {
+        do {
+            let entries = try await LocalPlantAIClient.shared.sharedAtlas().entries
+            sharedNames = Set(entries.map { sharedAtlasKey($0.name) })
+            sharedAtlasChecked = true
+        } catch { sharedAtlasError = error.localizedDescription }
+    }
+}
+
+func sharedAtlasKey(_ name: String) -> String {
+    name.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        .split(whereSeparator: { $0.isWhitespace }).joined(separator: " ").lowercased()
 }

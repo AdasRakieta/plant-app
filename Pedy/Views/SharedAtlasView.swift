@@ -81,7 +81,7 @@ private struct SharedSpeciesDetail: View {
                 if let image = entry.photo { Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 280) }
                 Text(entry.name).font(.largeTitle.bold())
                 Text("Wpis społeczności — wymagania i oznaczenie gatunku wymagają sprawdzenia.").foregroundStyle(.secondary)
-                Text(entry.requirements)
+                CareGuideCard(requirements: entry.requirements)
                 Text("Źródło: \(entry.source)").font(.footnote)
                 Text("Bezpieczeństwo dla zwierząt: brak zweryfikowanych danych.").font(.footnote)
                 Button("Dodaj do moich roślin") { adding = true }.buttonStyle(PrimaryButtonStyle())
@@ -95,7 +95,7 @@ struct SharedAtlasForm: View {
     @State private var name: String
     @State private var requirements: String
     @State private var image: UIImage?
-    @State private var source = ""
+    @State private var source: String
     @State private var photoItem: PhotosPickerItem?
     @State private var consent = false
     @State private var busy = false
@@ -106,6 +106,7 @@ struct SharedAtlasForm: View {
         _name = State(initialValue: plant?.speciesName ?? "")
         _requirements = State(initialValue: plant?.customRequirements ?? "")
         _image = State(initialValue: PlantPhotos.image(plant?.photoFilename))
+        _source = State(initialValue: "Własna obserwacja — wymaga weryfikacji")
     }
 
     var body: some View {
@@ -121,6 +122,9 @@ struct SharedAtlasForm: View {
             Section("Udostępnienie") {
                 Text("Wyślesz nazwę, wymagania, źródło i wybrany obraz na Malinę. Będą dostępne innym użytkownikom tego serwera. Nazwa egzemplarza, pomieszczenie i historia pielęgnacji pozostają prywatne.")
                 Toggle("Mam prawa do obrazu i opisu oraz zgadzam się na udostępnienie", isOn: $consent)
+                if !consent {
+                    Text("Aby odblokować zapis, potwierdź zgodę powyżej.").font(.footnote).foregroundStyle(.secondary)
+                }
                 Button(busy ? "Zapisuję…" : "Zapisz we wspólnym atlasie") {
                     Task { await publish() }
                 }.disabled(busy || published || !consent || name.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 || requirements.trimmingCharacters(in: .whitespacesAndNewlines).count < 10 || source.trimmingCharacters(in: .whitespacesAndNewlines).count < 3)
