@@ -9,7 +9,29 @@ struct PlantSpecies: Identifiable, Hashable {
     let intervalDays: Int
     let summary: String
     let petSafety: String
-    let aliases: [String] = []
+    let aliases: [String]
+
+    init(
+        id: String,
+        commonName: String,
+        latinName: String,
+        light: String,
+        watering: String,
+        intervalDays: Int,
+        summary: String,
+        petSafety: String,
+        aliases: [String] = []
+    ) {
+        self.id = id
+        self.commonName = commonName
+        self.latinName = latinName
+        self.light = light
+        self.watering = watering
+        self.intervalDays = intervalDays
+        self.summary = summary
+        self.petSafety = petSafety
+        self.aliases = aliases
+    }
 
     var imageName: String { id == "aglaonema" ? "PlantHero" : "Plant-\(id)" }
 
