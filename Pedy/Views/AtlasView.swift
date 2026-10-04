@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct AtlasView: View {
     @Query(sort: \Plant.name) private var plants: [Plant]
@@ -95,9 +96,18 @@ struct AtlasView: View {
 private struct CustomSpeciesDetailView: View {
     let plant: Plant
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
     @State private var adding = false
     @State private var sharedNames = Set<String>()
     @State private var sharedAtlasChecked = false
+
+    private var displayedRequirements: String? {
+        guard let requirements = plant.customRequirements, !requirements.isEmpty else { return PlantSpecies.match(plant.speciesName)?.editableInstructions }
+        if let standard = PlantSpecies.match(plant.speciesName), (requirements.contains("Szkic AI") || requirements.contains("###") || CareGuide(requirements).rows.count < 4) {
+            return standard.editableInstructions
+        }
+        return requirements
+    }
 
     var body: some View {
         NavigationStack {
@@ -118,7 +128,7 @@ private struct CustomSpeciesDetailView: View {
                     Text("Gatunek dodany przez Ciebie").foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Wymagania", systemImage: "list.bullet.clipboard") .font(.headline)
-                        if let requirements = plant.customRequirements, !requirements.isEmpty {
+                        if let requirements = displayedRequirements {
                             CareGuideCard(requirements: requirements)
                         } else {
                             Text("Brak zapisanych wymagań. Uzupełnij je w szczegółach rośliny, zanim oprzesz na nich pielęgnację.")
@@ -131,12 +141,21 @@ private struct CustomSpeciesDetailView: View {
             .toolbar { Button("Gotowe") { dismiss() } }
             .sheet(isPresented: $adding) { AddPlantView(customSpeciesName: plant.speciesName, customRequirements: plant.customRequirements ?? "") }
             .task {
+                migrateLegacyRequirementsIfNeeded()
                 if let entries = try? await LocalPlantAIClient.shared.sharedAtlas().entries {
                     sharedNames = Set(entries.map { sharedAtlasKey($0.name) })
                     sharedAtlasChecked = true
                 }
             }
         }
+    }
+
+    private func migrateLegacyRequirementsIfNeeded() {
+        guard let standard = PlantSpecies.match(plant.speciesName),
+              let requirements = plant.customRequirements,
+              (requirements.contains("Szkic AI") || requirements.contains("###") || CareGuide(requirements).rows.count < 4) else { return }
+        plant.customRequirements = standard.editableInstructions
+        try? context.save()
     }
 }
 
@@ -177,7 +196,8 @@ struct PlantThumbnail: View {
     var body: some View {
         Group {
             if let image = PlantPhotos.image(photoFilename) { Image(uiImage: image).resizable() }
-            else { Image(species?.imageName ?? "PlantHero").resizable() }
+            else if let image = UIImage(named: species?.imageName ?? "PlantHero") ?? UIImage(named: "PlantHero") { Image(uiImage: image).resizable() }
+            else { Image(systemName: "leaf.fill").resizable() }
         }.scaledToFill().frame(width: 64, height: 64).clipped().clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }

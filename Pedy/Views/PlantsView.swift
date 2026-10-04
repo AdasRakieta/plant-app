@@ -269,6 +269,10 @@ struct PlantDetailView: View {
             Section {
                 PlantThumbnail(species: PlantSpecies.match(plant.speciesName), photoFilename: plant.photoFilename)
                 PhotosPicker(selection: $photoItem, matching: .images) { Label("Zmień zdjęcie lub grafikę", systemImage: "photo") }
+                if plant.photoFilename == nil {
+                    Text("Brak osobistego zdjęcia z wcześniejszej wersji. Dodaj je ponownie — zostanie zapisane lokalnie i zmniejszone do bezpiecznego rozmiaru.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 if let photoMessage { Text(photoMessage).font(.footnote) }
                 sharedAtlasStatus
                 Button("Edytuj roślinę i wszystkie instrukcje") { editing = true }
