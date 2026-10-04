@@ -12,7 +12,7 @@ struct CareInstructionsEditor: View {
         TextEditor(text: $instructions).frame(minHeight: 200)
             .accessibilityLabel("Instrukcje pielęgnacji — edytuj dowolny fragment")
         Text("Możesz zmienić cały opis: światło, podlewanie, podłoże, doniczkę, nawożenie i pozostałe wskazówki.").font(.footnote)
-        Text("AI otrzyma tylko wpisany gatunek przez Malinę i Google Gemini, bez zdjęcia ani historii. Wspólny limit: 10 zapytań dziennie. Wynik wymaga weryfikacji i nie zmienia planera.").font(.footnote).foregroundStyle(.secondary)
+        Text("Dla gatunków z atlasu instrukcje są wczytywane lokalnie. Dla innych AI otrzyma tylko wpisaną nazwę przez Malinę, bez zdjęcia ani historii; wynik zostanie zapamiętany dla tego gatunku.").font(.footnote).foregroundStyle(.secondary)
         Button(generating ? "Przygotowuję instrukcje…" : "Wygeneruj instrukcje dla gatunku") {
             let requestedSpecies = speciesName.trimmingCharacters(in: .whitespacesAndNewlines)
             generating = true
@@ -20,6 +20,11 @@ struct CareInstructionsEditor: View {
             Task { @MainActor in
                 defer { generating = false }
                 do {
+                    if let species = PlantSpecies.match(requestedSpecies) {
+                        suggestion = species.editableInstructions
+                        message = "Wczytano instrukcje z atlasu aplikacji — Gemini nie zostało użyte."
+                        return
+                    }
                     let result = try await LocalPlantAIClient.shared.careProfile(speciesName: requestedSpecies)
                     guard requestedSpecies == speciesName.trimmingCharacters(in: .whitespacesAndNewlines) else {
                         message = "Gatunek zmienił się podczas generowania. Uruchom ponownie dla nowego gatunku."

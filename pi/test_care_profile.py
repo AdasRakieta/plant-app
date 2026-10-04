@@ -1,17 +1,21 @@
 import unittest
+import tempfile
 from unittest.mock import patch
 import ai_server
 
 
 class CareProfileTests(unittest.TestCase):
     def test_text_only_and_uncertainty_label(self):
-        with patch.object(ai_server, "ollama", return_value="SUMMARY: Roślina domowa.\nLIGHT: Rozproszone.\nWATERING: Po przeschnięciu.\nDIFFICULTY: Umiarkowana.\nFERTILIZER: W sezonie.\nSOIL: Przepuszczalne.\nPOT: Z odpływem.\nPET_SAFETY: Brak danych.") as model:
-            result = ai_server.care_profile({"speciesName": " Aglaonema ", "image": "must-not-be-sent"})
-            self.assertIn("wymagają weryfikacji", result["requirements"])
-            self.assertIn("Światło: Rozproszone.", result["requirements"])
-            self.assertEqual(len(model.call_args.args), 1)
-            self.assertIn('"Aglaonema"', model.call_args.args[0])
-            self.assertNotIn("must-not-be-sent", model.call_args.args[0])
+        with tempfile.TemporaryDirectory() as directory, patch.object(ai_server, "QUOTA_DB", directory + "/quota.db"):
+            with patch.object(ai_server, "ollama", return_value="SUMMARY: Roślina domowa.\nLIGHT: Rozproszone.\nWATERING: Po przeschnięciu.\nDIFFICULTY: Umiarkowana.\nFERTILIZER: W sezonie.\nSOIL: Przepuszczalne.\nPOT: Z odpływem.\nPET_SAFETY: Brak danych.") as model:
+                result = ai_server.care_profile({"speciesName": " Aglaonema ", "image": "must-not-be-sent"})
+                cached = ai_server.care_profile({"speciesName": "aglaonema"})
+                self.assertEqual(result, cached)
+                self.assertIn("wymagają weryfikacji", result["requirements"])
+                self.assertIn("Światło: Rozproszone.", result["requirements"])
+                self.assertEqual(model.call_count, 1)
+                self.assertIn('"Aglaonema"', model.call_args.args[0])
+                self.assertNotIn("must-not-be-sent", model.call_args.args[0])
 
     def test_invalid_names_do_not_call_provider(self):
         with patch.object(ai_server, "ollama") as model:

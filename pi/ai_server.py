@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sqlite3
+import unicodedata
 from datetime import datetime, timezone
 import urllib.error
 import urllib.request
@@ -31,6 +32,13 @@ def reserve_request():
             raise RuntimeError("Wykorzystano limit 10 analiz na dziś. Spróbuj jutro (reset o północy UTC).")
         db.execute("UPDATE usage SET count=count+1 WHERE day=?", (day,))
         db.execute("DELETE FROM usage WHERE day<>?", (day,))
+        return day
+
+def release_request(day):
+    """A failed provider call must not consume the app's own daily allowance."""
+    with sqlite3.connect(QUOTA_DB, timeout=5) as db:
+        db.execute("BEGIN IMMEDIATE")
+        db.execute("UPDATE usage SET count=MAX(count-1, 0) WHERE day=?", (day,))
 
 def response_text(data):
     candidates = data.get("candidates", [])
@@ -74,25 +82,35 @@ def care_requirements_from_answer(answer):
             values[current] = (values[current] + " " + line.strip()).strip()
     return "\n".join(f"{label}: {values[key]}" for key, label in CARE_FIELDS if values.get(key))
 
-def ollama(prompt, image=None):
+def ollama(prompt, image=None, max_output_tokens=450):
     if PROVIDER == "gemini":
         if not GEMINI_KEY:
             raise RuntimeError("Brak klucza usługi AI na serwerze.")
         parts = [{"text": prompt}]
         if image:
             parts.append({"inlineData": {"mimeType": "image/jpeg", "data": image}})
-        reserve_request()
-        payload = json.dumps({"contents": [{"parts": parts}], "generationConfig": {"temperature": 0.1, "maxOutputTokens": 2048}}).encode()
+        reservation = reserve_request()
+        succeeded = False
+        payload = json.dumps({"contents": [{"parts": parts}], "generationConfig": {
+            "maxOutputTokens": max_output_tokens, "thinkingConfig": {"thinkingLevel": "low"}
+        }}).encode()
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
         req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json", "X-goog-api-key": GEMINI_KEY})
         try:
             with urllib.request.urlopen(req, timeout=35) as response:
-                return response_text(json.load(response))
+                answer = response_text(json.load(response))
+            succeeded = True
+            return answer
         except urllib.error.HTTPError as exc:
-            messages = {429: "Limit Gemini został osiągnięty. Spróbuj później.", 404: "Wybrany model Gemini jest niedostępny.", 403: "Gemini odmówiło dostępu. Sprawdź konfigurację serwera.", 400: "Gemini odrzuciło żądanie. Sprawdź konfigurację serwera."}
+            retry_after = exc.headers.get("Retry-After")
+            retry = f" Spróbuj ponownie za około {retry_after} s." if retry_after else " Spróbuj ponownie później."
+            messages = {429: "Gemini chwilowo ogranicza zapytania." + retry + " Limit aplikacji nie został pobrany.", 404: "Wybrany model Gemini jest niedostępny.", 403: "Gemini odmówiło dostępu. Sprawdź konfigurację serwera.", 400: "Gemini odrzuciło żądanie. Sprawdź konfigurację serwera."}
             raise RuntimeError(messages.get(exc.code, "Usługa Gemini jest chwilowo niedostępna.")) from exc
         except (urllib.error.URLError, TimeoutError, OSError, KeyError, ValueError, IndexError) as exc:
             raise RuntimeError("Model sieciowy nie odpowiedział. Spróbuj ponownie za chwilę.") from exc
+        finally:
+            if not succeeded:
+                release_request(reservation)
     message = {"role": "user", "content": prompt}
     if image:
         message["images"] = [image]
@@ -123,13 +141,23 @@ def care_profile(body):
         "Maksymalnie 250 słów. To niezweryfikowany szkic do sprawdzenia przez użytkownika. "
         "Nazwa: " + json.dumps(species.strip(), ensure_ascii=False)
     )
-    answer = ollama(prompt)
+    cache_key = " ".join(unicodedata.normalize("NFKC", species).casefold().split())
+    with sqlite3.connect(QUOTA_DB, timeout=5) as db:
+        db.execute("CREATE TABLE IF NOT EXISTS care_profiles (species_key TEXT PRIMARY KEY, requirements TEXT NOT NULL)")
+        cached = db.execute("SELECT requirements FROM care_profiles WHERE species_key=?", (cache_key,)).fetchone()
+    if cached:
+        return {"requirements": cached[0]}
+    answer = ollama(prompt, max_output_tokens=420)
     if len(answer.strip()) < 30 or len(answer) > 6000:
         raise RuntimeError("AI nie zwróciło kompletnych instrukcji. Spróbuj ponownie.")
     formatted = care_requirements_from_answer(answer)
     if not formatted:
         raise RuntimeError("AI zwróciło instrukcje w niepoprawnym formacie. Spróbuj ponownie.")
-    return {"requirements": "Status: Szkic AI — dane wymagają weryfikacji.\n" + formatted}
+    requirements = "Status: Szkic AI — dane wymagają weryfikacji.\n" + formatted
+    with sqlite3.connect(QUOTA_DB, timeout=5) as db:
+        db.execute("CREATE TABLE IF NOT EXISTS care_profiles (species_key TEXT PRIMARY KEY, requirements TEXT NOT NULL)")
+        db.execute("INSERT OR REPLACE INTO care_profiles VALUES (?, ?)", (cache_key, requirements))
+    return {"requirements": requirements}
 
 def safe_fallback(symptom):
     return {
@@ -225,7 +253,7 @@ class Handler(BaseHTTPRequestHandler):
                     "Use COMMON: UNKNOWN only when it is not possible to identify a plant at all."
                 )
                 try:
-                    answer = ollama(prompt, image)
+                    answer = ollama(prompt, image, max_output_tokens=650)
                 except RuntimeError as exc:
                     return self.send_json(503, {"error": str(exc)})
                 candidate = identification_candidate(answer)
@@ -241,7 +269,7 @@ class Handler(BaseHTTPRequestHandler):
                       "Odpowiedz po polsku w 2-3 zdaniach. Opisz widoczne objawy i ostrożne hipotezy. "
                       "Nie uznawaj naturalnego ubarwienia za chorobę. Wskaż brakujące informacje. Nie zalecaj zabiegów ani środków chemicznych.")
             try:
-                answer = ollama(prompt, image)
+                answer = ollama(prompt, image, max_output_tokens=450)
             except RuntimeError as exc:
                 return self.send_json(503, {"error": str(exc)})
             if len(answer) < 12:
