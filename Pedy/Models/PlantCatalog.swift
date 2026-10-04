@@ -33,7 +33,7 @@ struct PlantSpecies: Identifiable, Hashable {
         self.aliases = aliases
     }
 
-    var imageName: String { id == "aglaonema" ? "PlantHero" : "Plant-\(id)" }
+    var imageName: String { "Plant-\(id)" }
 
     var editableInstructions: String {
         "\(summary)\n\nŚwiatło: \(light)\nPodlewanie: \(watering)\nPodłoże: \(soil)\nDoniczka: \(pot)\nNawożenie: \(fertilizer)\nTrudność: \(difficulty)\nZwierzęta: \(petSafety)"
